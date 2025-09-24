@@ -1,0 +1,26 @@
+{
+  "name": "@aport/sdk",
+  "version": "0.1.0",
+  "description": "APort SDK for agent verification",
+  "main": "node/dist/index.js",
+  "types": "node/dist/index.d.ts",
+  "scripts": {
+    "build": "pnpm run build:node && pnpm run build:python",
+    "build:node": "cd node && pnpm run build",
+    "build:python": "cd python && python -m build",
+    "test": "pnpm run test:node && pnpm run test:python",
+    "test:node": "cd node && pnpm test",
+    "test:python": "cd python && python -m pytest"
+  },
+  "keywords": ["aport", "sdk", "agent", "verification", "policy"],
+  "author": "APort Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aporthq/aport-sdk.git"
+  },
+  "bugs": {
+    "url": "https://github.com/aporthq/aport-sdk/issues"
+  },
+  "homepage": "https://aport.io/docs"
+}

@@ -1,0 +1,42 @@
+{
+  "name": "aport-express-examples",
+  "version": "1.0.0",
+  "description": "Express.js examples for Agent Passport policy enforcement",
+  "main": "simple-standard-example.js",
+  "scripts": {
+    "start:simple": "node simple-standard-example.js",
+    "start:complete": "node complete-integration-example.js",
+    "start:advanced": "node standard-middleware-example.js",
+    "test": "node test-examples.js",
+    "dev": "nodemon simple-standard-example.js"
+  },
+  "keywords": [
+    "agent-passport",
+    "policy-enforcement",
+    "express",
+    "middleware",
+    "security",
+    "authentication"
+  ],
+  "author": "Agent Passport Team",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "node-fetch": "^2.7.0",
+    "@aporthq/middleware-express": "file:.."
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/agent-passport/agent-passport"
+  },
+  "bugs": {
+    "url": "https://github.com/agent-passport/agent-passport/issues"
+  },
+  "homepage": "https://github.com/agent-passport/agent-passport#readme"
+}
