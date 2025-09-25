@@ -1,0 +1,214 @@
+name: Publish Packages from Target Repo
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      package:
+        description: "Package to publish"
+        required: true
+        type: choice
+        options:
+          - sdk-node
+          - sdk-python
+          - middleware-express
+          - middleware-fastapi
+          - all
+      version:
+        description: "Version to publish (e.g., 0.1.0)"
+        required: false
+        type: string
+
+jobs:
+  publish-sdk-node:
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && (github.event.inputs.package == 'sdk-node' || github.event.inputs.package == 'all'))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install dependencies
+        run: |
+          cd sdk/node
+          npm ci
+
+      - name: Build
+        run: |
+          cd sdk/node
+          npm run build
+
+      - name: Run tests
+        run: |
+          cd sdk/node
+          npm test
+
+      - name: Publish to npm
+        run: |
+          cd sdk/node
+          npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  publish-sdk-python:
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && (github.event.inputs.package == 'sdk-python' || github.event.inputs.package == 'all'))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: |
+          cd sdk/python
+          pip install build twine
+
+      - name: Build package
+        run: |
+          cd sdk/python
+          python -m build
+
+      - name: Run tests
+        run: |
+          cd sdk/python
+          pip install -e .
+          python -m pytest tests/ -v
+
+      - name: Publish to PyPI
+        run: |
+          cd sdk/python
+          python -m twine upload dist/*
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+
+  publish-middleware-express:
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && (github.event.inputs.package == 'middleware-express' || github.event.inputs.package == 'all'))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install dependencies
+        run: |
+          cd middleware/express
+          npm ci
+
+      - name: Build
+        run: |
+          cd middleware/express
+          npm run build
+
+      - name: Publish to npm
+        run: |
+          cd middleware/express
+          npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  publish-middleware-fastapi:
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && (github.event.inputs.package == 'middleware-fastapi' || github.event.inputs.package == 'all'))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: |
+          cd middleware/fastapi
+          pip install build twine
+
+      - name: Build package
+        run: |
+          cd middleware/fastapi
+          python -m build
+
+      - name: Publish to PyPI
+        run: |
+          cd middleware/fastapi
+          python -m twine upload dist/*
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+
+  create-release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [publish-sdk-node, publish-sdk-python, publish-middleware-express, publish-middleware-fastapi]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: Release ${{ github.ref_name }}
+          body: |
+            ## What's New in ${{ github.ref_name }}
+
+            This release includes updates to all APort SDKs and middleware packages.
+
+            ### Packages Published
+            - **@aporthq/sdk-node** - Node.js SDK
+            - **aporthq-sdk-python** - Python SDK
+            - **@aporthq/middleware-express** - Express.js middleware
+            - **agent-passport-middleware-fastapi** - FastAPI middleware
+
+            ### Installation
+            ```bash
+            # Node.js
+            npm install @aporthq/sdk-node@${{ github.ref_name }}
+            npm install @aporthq/middleware-express@${{ github.ref_name }}
+
+            # Python
+            pip install aporthq-sdk-python==${{ github.ref_name }}
+            pip install agent-passport-middleware-fastapi==${{ github.ref_name }}
+            ```
+
+            ### Documentation
+            - [Node.js SDK](sdk/node/README.md)
+            - [Python SDK](sdk/python/README.md)
+            - [Express Middleware](middleware/express/README.md)
+            - [FastAPI Middleware](middleware/fastapi/README.md)
+
+            ---
+            *This release was automatically generated by the APort CI/CD pipeline.*
+          draft: false
+          prerelease: false
