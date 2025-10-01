@@ -27,6 +27,8 @@ jobs:
   publish-sdk-node:
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && (github.event.inputs.package == 'sdk-node' || github.event.inputs.package == 'all'))
     runs-on: ubuntu-latest
+    env:
+      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -38,6 +40,21 @@ jobs:
         with:
           node-version: "20"
           registry-url: "https://registry.npmjs.org"
+          scope: "@aporthq"
+
+      - name: Check if Node SDK directory exists
+        run: |
+          if [ ! -d "sdk/node" ]; then
+            echo "❌ sdk/node directory not found"
+            echo "Available directories:"
+            ls -la
+            echo "Contents of current directory:"
+            find . -type d -name "*" | head -20
+            exit 1
+          else
+            echo "✅ sdk/node directory found"
+            ls -la sdk/node/
+          fi
 
       - name: Install dependencies
         run: |
@@ -58,12 +75,13 @@ jobs:
         run: |
           cd sdk/node
           npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   publish-sdk-python:
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && (github.event.inputs.package == 'sdk-python' || github.event.inputs.package == 'all'))
     runs-on: ubuntu-latest
+    env:
+      TWINE_USERNAME: __token__
+      TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -75,10 +93,24 @@ jobs:
         with:
           python-version: "3.10"
 
+      - name: Check if Python SDK directory exists
+        run: |
+          if [ ! -d "sdk/python" ]; then
+            echo "❌ sdk/python directory not found"
+            echo "Available directories:"
+            ls -la
+            echo "Contents of current directory:"
+            find . -type d -name "*" | head -20
+            exit 1
+          else
+            echo "✅ sdk/python directory found"
+            ls -la sdk/python/
+          fi
+
       - name: Install dependencies
         run: |
           cd sdk/python
-          pip install build twine
+          pip install build twine pytest
 
       - name: Build package
         run: |
@@ -95,13 +127,13 @@ jobs:
         run: |
           cd sdk/python
           python -m twine upload dist/*
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
 
   publish-middleware-express:
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && (github.event.inputs.package == 'middleware-express' || github.event.inputs.package == 'all'))
+    needs: publish-sdk-node
     runs-on: ubuntu-latest
+    env:
+      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -113,11 +145,31 @@ jobs:
         with:
           node-version: "20"
           registry-url: "https://registry.npmjs.org"
+          scope: "@aporthq"
+
+      - name: Check if Express middleware directory exists
+        run: |
+          if [ ! -d "middleware/express" ]; then
+            echo "❌ middleware/express directory not found"
+            echo "Available directories:"
+            ls -la
+            echo "Contents of current directory:"
+            find . -type d -name "*" | head -20
+            exit 1
+          else
+            echo "✅ middleware/express directory found"
+            ls -la middleware/express/
+          fi
 
       - name: Install dependencies
         run: |
           cd middleware/express
           npm ci
+
+      - name: Install local SDK
+        run: |
+          cd middleware/express
+          npm install ../sdk/node
 
       - name: Build
         run: |
@@ -128,12 +180,14 @@ jobs:
         run: |
           cd middleware/express
           npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   publish-middleware-fastapi:
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && (github.event.inputs.package == 'middleware-fastapi' || github.event.inputs.package == 'all'))
+    needs: publish-sdk-python
     runs-on: ubuntu-latest
+    env:
+      TWINE_USERNAME: __token__
+      TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -145,10 +199,29 @@ jobs:
         with:
           python-version: "3.10"
 
+      - name: Check if FastAPI middleware directory exists
+        run: |
+          if [ ! -d "middleware/fastapi" ]; then
+            echo "❌ middleware/fastapi directory not found"
+            echo "Available directories:"
+            ls -la
+            echo "Contents of current directory:"
+            find . -type d -name "*" | head -20
+            exit 1
+          else
+            echo "✅ middleware/fastapi directory found"
+            ls -la middleware/fastapi/
+          fi
+
       - name: Install dependencies
         run: |
           cd middleware/fastapi
           pip install build twine
+
+      - name: Install local SDK
+        run: |
+          cd middleware/fastapi
+          pip install -e ../sdk/python
 
       - name: Build package
         run: |
@@ -159,13 +232,16 @@ jobs:
         run: |
           cd middleware/fastapi
           python -m twine upload dist/*
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
 
   create-release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [publish-sdk-node, publish-sdk-python, publish-middleware-express, publish-middleware-fastapi]
+    needs:
+      [
+        publish-sdk-node,
+        publish-sdk-python,
+        publish-middleware-express,
+        publish-middleware-fastapi,
+      ]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

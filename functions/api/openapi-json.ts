@@ -1,0 +1,2170 @@
+import { cors } from "../utils/cors";
+import { KVNamespace, PagesFunction } from "@cloudflare/workers-types";
+
+/**
+ * @swagger
+ * /api/openapi-json:
+ *   get:
+ *     summary: Get OpenAPI JSON specification
+ *     description: Returns the complete OpenAPI 3.0 specification in JSON format
+ *     operationId: getOpenAPIJson
+ *     tags:
+ *       - API Documentation
+ *     responses:
+ *       200:
+ *         description: OpenAPI specification in JSON format
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               description: Complete OpenAPI 3.0 specification
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+
+interface Env {
+  ai_passport_registry: KVNamespace;
+  AP_VERSION: string;
+}
+
+// Generated OpenAPI specification from @swagger comments
+const OPENAPI_SPEC = {
+  "openapi": "3.0.0",
+  "info": {
+    "title": "AI Passport Registry API",
+    "description": "API for managing AI agent passports, policy enforcement, and verification. Generated from JSDoc @swagger comments.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "AI Passport Registry",
+      "url": "https://aport.io",
+      "email": "support@aport.io"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://aport.io",
+      "description": "Production server"
+    },
+    {
+      "url": "http://localhost:8787",
+      "description": "Development server"
+    }
+  ],
+  "paths": {
+    "/api/about/{agent_id}": {
+      "get": {
+        "summary": "Get agent passport Agent Passport page",
+        "description": "Retrieve public information about an agent passport for display on Agent Passport pages",
+        "operationId": "getAboutPage",
+        "tags": [
+          "Public"
+        ],
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Path parameter: agent_id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/assurance": {
+      "get": {
+        "summary": "Get assurance levels",
+        "description": "Retrieve all available assurance levels with metadata",
+        "operationId": "getAssuranceLevels",
+        "tags": [
+          "Assurance"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": []
+      }
+    },
+    "/api/assurance/validate": {
+      "post": {
+        "summary": "Validate assurance level and method",
+        "description": "Validate assurance level and method combinations",
+        "operationId": "validateAssurance",
+        "tags": [
+          "Assurance"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "level": {
+                    "type": "string",
+                    "description": "Assurance level to validate"
+                  },
+                  "method": {
+                    "type": "string",
+                    "description": "Assurance method to validate"
+                  },
+                  "required": {}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": []
+      }
+    },
+    "/api/attestation/hashes/{tenant_id}": {
+      "get": {
+        "summary": "Get audit hash-chain for tenant",
+        "description": "Returns the last N audit hashes for a tenant to enable tampering detection",
+        "operationId": "getAuditHashes",
+        "tags": [
+          "Attestation"
+        ],
+        "parameters": [
+          {
+            "name": "tenant_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Path parameter: tenant_id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/keys/{key_id}": {
+      "get": {
+        "summary": "Get API key details",
+        "description": "Get details of a specific API key (without the actual key)",
+        "operationId": "getApiKey",
+        "tags": [
+          "API Keys"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "key_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Path parameter: key_id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/keys": {
+      "post": {
+        "summary": "Create API key",
+        "description": "Create a new API key for a user or organization",
+        "operationId": "createApiKey",
+        "tags": [
+          "API Keys"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/metrics": {
+      "get": {
+        "summary": "Get system metrics",
+        "description": "Retrieve system performance metrics and statistics (admin only)",
+        "operationId": "getMetrics",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/openapi-json": {
+      "get": {
+        "summary": "Get OpenAPI JSON specification",
+        "description": "Returns the complete OpenAPI 3.0 specification in JSON format",
+        "operationId": "getOpenAPIJson",
+        "tags": [
+          "API Documentation"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": []
+      }
+    },
+    "/api/orgs": {
+      "post": {
+        "summary": "Create a new organization",
+        "description": "Creates a new organization record in the system",
+        "operationId": "createOrg",
+        "tags": [
+          "Organizations"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "example": "*             name: Acme Corp"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": []
+      }
+    },
+    "/api/passports/{agent_id}/status": {
+      "put": {
+        "summary": "Update passport status",
+        "description": "Changes the status of an existing passport (suspend, activate, revoke) with comprehensive validation, Verifiable Attestation, and admin support. Triggers webhooks and cache invalidation.",
+        "operationId": "updatePassportStatus",
+        "tags": [
+          "Passports"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Path parameter: agent_id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "agent_id",
+                  "owner_id",
+                  "status"
+                ],
+                "properties": {
+                  "agent_id": {
+                    "type": "string",
+                    "description": "The agent passport ID (must match path parameter)",
+                    "example": "aeebc92d-13fb-4e23-8c3c-1aa82b167da6"
+                  },
+                  "owner_id": {
+                    "type": "string",
+                    "description": "The owner ID of the passport",
+                    "example": "ap_org_456"
+                  },
+                  "status": {
+                    "type": "string",
+                    "description": "New status for the passport",
+                    "enum": [
+                      "draft",
+                      "active",
+                      "suspended",
+                      "revoked"
+                    ],
+                    "example": "suspended"
+                  },
+                  "reason": {
+                    "type": "string",
+                    "description": "Reason for the status change",
+                    "example": "Policy violation detected"
+                  },
+                  "admin_notes": {
+                    "type": "string",
+                    "description": "Admin-only notes (requires admin token)",
+                    "example": "Suspended due to suspicious activity"
+                  },
+                  "force_change": {
+                    "type": "boolean",
+                    "description": "Force status change even if validation fails (admin only)"
+                  },
+                  "notify_owner": {
+                    "type": "boolean",
+                    "description": "Whether to notify the passport owner of the status change"
+                  },
+                  "webhook_data": {
+                    "type": "object",
+                    "description": "Additional data to include in webhook notifications",
+                    "example": "{source: admin_panel, admin_user: admin@company.com}"
+                  }
+                },
+                "enum": [
+                  "draft",
+                  "active",
+                  "suspended",
+                  "revoked"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/passports/{agent_id}": {
+      "put": {
+        "summary": "Update an existing passport",
+        "description": "Updates an existing agent passport with comprehensive validation, Verifiable Attestation, and admin support. Supports partial updates and admin overrides.",
+        "operationId": "updatePassport",
+        "tags": [
+          "Passports"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Path parameter: agent_id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "id"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "example": "payments"
+                  },
+                  "slug": {
+                    "type": "string",
+                    "description": "Updated URL-friendly identifier",
+                    "example": "updated-support-bot"
+                  },
+                  "role": {
+                    "type": "string",
+                    "description": "Updated functional role of the agent",
+                    "example": "senior_support",
+                    "enum": [
+                      "agent",
+                      "assistant",
+                      "tool",
+                      "service"
+                    ]
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "Updated description of the agent's purpose and capabilities",
+                    "example": "Enhanced AI-powered customer support agent with advanced capabilities"
+                  },
+                  "capabilities": {
+                    "type": "array",
+                    "description": "Updated list of agent capabilities with optional parameters"
+                  },
+                  "items": {
+                    "type": "object",
+                    "properties": {}
+                  },
+                  "required": {
+                    "properties": {}
+                  },
+                  "id": {
+                    "type": "string",
+                    "example": "claude-3.5-sonnet"
+                  },
+                  "params": {
+                    "type": "object",
+                    "description": "Capability-specific parameters",
+                    "example": "{max_amount: 2000, currency: USD}"
+                  },
+                  "limits": {
+                    "type": "object",
+                    "description": "Updated operational limits and constraints",
+                    "properties": {}
+                  },
+                  "refund_amount_max_per_tx": {
+                    "type": "number",
+                    "description": "Maximum refund amount per transaction (USD cents)",
+                    "example": "10000"
+                  },
+                  "refund_amount_daily_cap": {
+                    "type": "number",
+                    "description": "Maximum daily refund amount (USD cents)",
+                    "example": "100000"
+                  },
+                  "max_export_rows": {
+                    "type": "number",
+                    "description": "Maximum rows in data exports",
+                    "example": "20000"
+                  },
+                  "allow_pii": {
+                    "type": "boolean",
+                    "description": "Whether PII access is allowed",
+                    "example": "true"
+                  },
+                  "msgs_per_day": {
+                    "type": "number",
+                    "description": "Maximum messages per day",
+                    "example": "2000"
+                  },
+                  "max_prs_per_day": {
+                    "type": "number",
+                    "description": "Maximum pull requests per day",
+                    "example": "20"
+                  },
+                  "regions": {
+                    "type": "array",
+                    "description": "Updated geographic regions where the agent can operate"
+                  },
+                  "contact": {
+                    "type": "string",
+                    "description": "Updated contact information for the agent owner",
+                    "example": "support@acme.com"
+                  },
+                  "links": {
+                    "type": "object",
+                    "description": "Updated external links and resources",
+                    "properties": {}
+                  },
+                  "homepage": {
+                    "type": "string",
+                    "description": "Agent homepage URL",
+                    "example": "https://acme.com/updated-bot"
+                  },
+                  "docs": {
+                    "type": "string",
+                    "description": "Documentation URL",
+                    "example": "https://docs.acme.com/updated-bot"
+                  },
+                  "repo": {
+                    "type": "string",
+                    "description": "Source code repository URL",
+                    "example": "https://github.com/acme/updated-support-bot"
+                  },
+                  "category": {
+                    "type": "string",
+                    "description": "Updated agent category classification",
+                    "example": "senior_support",
+                    "enum": [
+                      "customer_support",
+                      "sales",
+                      "development",
+                      "security",
+                      "general"
+                    ]
+                  },
+                  "framework": {
+                    "type": "string",
+                    "description": "Updated AI framework used",
+                    "example": "anthropic",
+                    "enum": [
+                      "openai",
+                      "anthropic",
+                      "google",
+                      "meta",
+                      "custom"
+                    ]
+                  },
+                  "model_info": {
+                    "type": "object",
+                    "description": "Updated AI model information and capabilities",
+                    "properties": {}
+                  },
+                  "model_refs": {
+                    "type": "array",
+                    "description": "AI models used by the agent"
+                  },
+                  "provider": {
+                    "type": "string",
+                    "example": "Stripe"
+                  },
+                  "version": {
+                    "type": "string",
+                    "example": "2025-01-01"
+                  },
+                  "modality": {
+                    "type": "string",
+                    "example": "text"
+                  },
+                  "tools": {
+                    "type": "array",
+                    "description": "External tools integrated"
+                  },
+                  "admin_notes": {
+                    "type": "string",
+                    "description": "Admin-only notes (requires admin token)",
+                    "example": "Updated for enterprise requirements"
+                  },
+                  "force_update": {
+                    "type": "boolean",
+                    "description": "Force update even if validation fails (admin only)"
+                  },
+                  "skip_validation": {
+                    "type": "boolean",
+                    "description": "Skip validation checks (admin only)"
+                  },
+                  "notify_owner": {
+                    "type": "boolean",
+                    "description": "Whether to notify the passport owner of the update"
+                  },
+                  "webhook_data": {
+                    "type": "object",
+                    "description": "Additional data to include in webhook notifications",
+                    "example": "{source: admin_panel, admin_user: admin@company.com}"
+                  }
+                },
+                "enum": [
+                  "agent",
+                  "assistant",
+                  "tool",
+                  "service"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/passports/{template_id}/instances": {
+      "get": {
+        "summary": "List instances of a template passport",
+        "description": "Get a paginated list of all instances created from a template",
+        "operationId": "listPassportInstances",
+        "tags": [
+          "Passports"
+        ],
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Path parameter: template_id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create an instance of a template passport",
+        "description": "Creates a new instance passport based on an existing template",
+        "operationId": "createPassportInstance",
+        "tags": [
+          "Passports"
+        ],
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Path parameter: template_id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "platform_id",
+                  "tenant_ref",
+                  "controller_id",
+                  "controller_type"
+                ],
+                "properties": {
+                  "platform_id": {
+                    "type": "string",
+                    "description": "Platform identifier",
+                    "example": "gorgias"
+                  },
+                  "tenant_ref": {
+                    "type": "string",
+                    "description": "Platform's tenant identifier",
+                    "example": "tenant_123"
+                  },
+                  "controller_id": {
+                    "type": "string",
+                    "description": "Controller org/user ID",
+                    "example": "ap_org_456"
+                  },
+                  "controller_type": {
+                    "type": "string",
+                    "enum": [
+                      "org",
+                      "user"
+                    ],
+                    "description": "Controller type",
+                    "example": "org"
+                  },
+                  "limits": {
+                    "type": "object",
+                    "description": "Instance-specific limits overrides"
+                  },
+                  "regions": {
+                    "type": "array"
+                  },
+                  "items": {
+                    "type": "string",
+                    "description": "Instance-specific regions",
+                    "example": "[US-CA, US-NY]"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "draft",
+                      "active",
+                      "suspended",
+                      "revoked"
+                    ],
+                    "description": "Instance status",
+                    "example": "active"
+                  },
+                  "assurance_level": {
+                    "type": "string",
+                    "description": "Instance assurance level",
+                    "example": "L2"
+                  },
+                  "contact": {
+                    "type": "string",
+                    "description": "Instance contact",
+                    "example": "support@tenant.com"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "Instance description",
+                    "example": "Gorgias instance for Acme Corp"
+                  }
+                },
+                "enum": [
+                  "org",
+                  "user"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/passports/{template_id}/webhooks": {
+      "post": {
+        "summary": "Create agent passport-specific webhook",
+        "description": "Register a webhook endpoint for a specific agent/passport",
+        "operationId": "createAgentWebhook",
+        "tags": [
+          "Webhooks"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Path parameter: template_id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "url",
+                  "secret",
+                  "events"
+                ],
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "description": "The webhook endpoint URL"
+                  },
+                  "secret": {
+                    "type": "string",
+                    "description": "Secret for signing webhook payloads"
+                  },
+                  "events": {
+                    "type": "array"
+                  },
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "status.changed",
+                      "passport.updated",
+                      "assurance.updated",
+                      "attestation.created",
+                      "attestation.verified",
+                      "instance.created",
+                      "instance.suspended"
+                    ],
+                    "description": "List of events to subscribe to"
+                  },
+                  "active": {
+                    "type": "boolean",
+                    "description": "Whether the webhook is active"
+                  },
+                  "retry_attempts": {
+                    "type": "integer",
+                    "description": "Number of retry attempts"
+                  },
+                  "timeout_ms": {
+                    "type": "integer",
+                    "description": "Request timeout in milliseconds"
+                  }
+                },
+                "enum": [
+                  "status.changed",
+                  "passport.updated",
+                  "assurance.updated",
+                  "attestation.created",
+                  "attestation.verified",
+                  "instance.created",
+                  "instance.suspended"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/passports": {
+      "post": {
+        "summary": "Create a new agent passport",
+        "description": "Creates a new agent passport (template or instance) with comprehensive validation, Verifiable Attestation, and admin support. Supports both regular user creation and admin-created passports.",
+        "operationId": "createPassport",
+        "tags": [
+          "Passports"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "role",
+                  "description",
+                  "capabilities",
+                  "limits",
+                  "regions",
+                  "contact"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "example": "payments"
+                  },
+                  "slug": {
+                    "type": "string",
+                    "description": "URL-friendly identifier (auto-generated if not provided)",
+                    "example": "acme-support-bot"
+                  },
+                  "role": {
+                    "type": "string",
+                    "description": "Functional role of the agent",
+                    "example": "customer_support",
+                    "enum": [
+                      "agent",
+                      "assistant",
+                      "tool",
+                      "service"
+                    ]
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "Detailed description of the agent's purpose and capabilities",
+                    "example": "AI-powered customer support agent for handling common inquiries"
+                  },
+                  "capabilities": {
+                    "type": "array",
+                    "description": "List of agent capabilities with optional parameters"
+                  },
+                  "items": {
+                    "type": "object",
+                    "properties": {}
+                  },
+                  "required": {
+                    "properties": {}
+                  },
+                  "id": {
+                    "type": "string",
+                    "example": "gpt-4o-mini"
+                  },
+                  "params": {
+                    "type": "object",
+                    "description": "Capability-specific parameters",
+                    "example": "{max_amount: 1000, currency: USD}"
+                  },
+                  "limits": {
+                    "type": "object",
+                    "description": "Operational limits and constraints",
+                    "properties": {}
+                  },
+                  "refund_amount_max_per_tx": {
+                    "type": "number",
+                    "description": "Maximum refund amount per transaction (USD cents)",
+                    "example": "5000"
+                  },
+                  "refund_amount_daily_cap": {
+                    "type": "number",
+                    "description": "Maximum daily refund amount (USD cents)",
+                    "example": "50000"
+                  },
+                  "max_export_rows": {
+                    "type": "number",
+                    "description": "Maximum rows in data exports",
+                    "example": "10000"
+                  },
+                  "allow_pii": {
+                    "type": "boolean",
+                    "description": "Whether PII access is allowed",
+                    "example": "false"
+                  },
+                  "msgs_per_day": {
+                    "type": "number",
+                    "description": "Maximum messages per day",
+                    "example": "1000"
+                  },
+                  "max_prs_per_day": {
+                    "type": "number",
+                    "description": "Maximum pull requests per day",
+                    "example": "10"
+                  },
+                  "regions": {
+                    "type": "array",
+                    "description": "Geographic regions where the agent can operate"
+                  },
+                  "contact": {
+                    "type": "string",
+                    "description": "Contact information for the agent owner",
+                    "example": "admin@acme.com"
+                  },
+                  "links": {
+                    "type": "object",
+                    "description": "External links and resources",
+                    "properties": {}
+                  },
+                  "homepage": {
+                    "type": "string",
+                    "description": "Agent homepage URL",
+                    "example": "https://acme.com/bot"
+                  },
+                  "docs": {
+                    "type": "string",
+                    "description": "Documentation URL",
+                    "example": "https://docs.acme.com/bot"
+                  },
+                  "repo": {
+                    "type": "string",
+                    "description": "Source code repository URL",
+                    "example": "https://github.com/acme/support-bot"
+                  },
+                  "category": {
+                    "type": "string",
+                    "description": "Agent category classification",
+                    "example": "customer_support",
+                    "enum": [
+                      "customer_support",
+                      "sales",
+                      "development",
+                      "security",
+                      "general"
+                    ]
+                  },
+                  "framework": {
+                    "type": "string",
+                    "description": "AI framework used",
+                    "example": "openai",
+                    "enum": [
+                      "openai",
+                      "anthropic",
+                      "google",
+                      "meta",
+                      "custom"
+                    ]
+                  },
+                  "model_info": {
+                    "type": "object",
+                    "description": "AI model information and capabilities",
+                    "properties": {}
+                  },
+                  "model_refs": {
+                    "type": "array",
+                    "description": "AI models used by the agent"
+                  },
+                  "provider": {
+                    "type": "string",
+                    "example": "Stripe"
+                  },
+                  "version": {
+                    "type": "string",
+                    "example": "2025-08-01"
+                  },
+                  "modality": {
+                    "type": "string",
+                    "example": "text"
+                  },
+                  "tools": {
+                    "type": "array",
+                    "description": "External tools integrated"
+                  },
+                  "admin_notes": {
+                    "type": "string",
+                    "description": "Admin-only notes (requires admin token)",
+                    "example": "Created for enterprise client"
+                  },
+                  "force_create": {
+                    "type": "boolean",
+                    "description": "Force creation even if validation fails (admin only)"
+                  },
+                  "template_id": {
+                    "type": "string",
+                    "description": "Template ID for instance creation",
+                    "example": "ap_template_123"
+                  },
+                  "instance_overrides": {
+                    "type": "object",
+                    "description": "Instance-specific overrides for template-based creation"
+                  },
+                  "skip_validation": {
+                    "type": "boolean",
+                    "description": "Skip validation checks (admin only)"
+                  }
+                },
+                "enum": [
+                  "agent",
+                  "assistant",
+                  "tool",
+                  "service"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": []
+      }
+    },
+    "/api/policies/{policy_name}": {
+      "get": {
+        "summary": "Get a policy pack by name and version",
+        "description": "Retrieves a specific policy pack configuration",
+        "parameters": [
+          {
+            "name": "policy_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Path parameter: policy_name"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/status": {
+      "get": {
+        "summary": "Get system status",
+        "description": "Returns current system status including SLO metrics and health",
+        "tags": [
+          "Monitoring"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": []
+      }
+    },
+    "/api/swagger-ui": {
+      "get": {
+        "summary": "Swagger UI interface",
+        "description": "Interactive API documentation interface",
+        "operationId": "getSwaggerUI",
+        "tags": [
+          "API Documentation"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": []
+      }
+    },
+    "/api/taxonomy": {
+      "get": {
+        "summary": "Get taxonomy data",
+        "description": "Retrieve controlled enums for categories and frameworks with display metadata",
+        "operationId": "getTaxonomy",
+        "tags": [
+          "Taxonomy"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": []
+      }
+    },
+    "/api/taxonomy/badges": {
+      "get": {
+        "summary": "Get badge data for specific categories and frameworks",
+        "description": "Generate badge display data for AgentCard components",
+        "operationId": "getTaxonomyBadges",
+        "tags": [
+          "Taxonomy"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tenants": {
+      "post": {
+        "summary": "Create a new tenant",
+        "description": "Creates a new tenant with region selection support for multi-region and multi-tenant architecture.",
+        "operationId": "createTenant",
+        "tags": [
+          "Tenants"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "slug",
+                  "region"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Display name of the tenant",
+                    "example": "Acme Corporation"
+                  },
+                  "slug": {
+                    "type": "string",
+                    "description": "URL-friendly identifier for the tenant",
+                    "example": "acme-corp"
+                  },
+                  "region": {
+                    "type": "string",
+                    "enum": [
+                      "US",
+                      "EU",
+                      "CA",
+                      "AP",
+                      "AU",
+                      "BR"
+                    ],
+                    "description": "Region where tenant data will be stored",
+                    "example": "EU"
+                  },
+                  "compliance_level": {
+                    "type": "string",
+                    "enum": [
+                      "standard",
+                      "enterprise",
+                      "private"
+                    ],
+                    "description": "Compliance level for the tenant"
+                  },
+                  "features": {
+                    "type": "array"
+                  },
+                  "items": {
+                    "type": "string",
+                    "description": "Enabled features for the tenant",
+                    "example": "[audit, webhooks, gdpr]"
+                  },
+                  "limits": {
+                    "type": "object",
+                    "properties": {}
+                  },
+                  "maxPassports": {
+                    "type": "integer",
+                    "description": "Maximum number of passports allowed"
+                  },
+                  "maxRequestsPerMonth": {
+                    "type": "integer",
+                    "description": "Maximum API requests per month"
+                  },
+                  "metadata": {
+                    "type": "object",
+                    "description": "Additional metadata for the tenant"
+                  }
+                },
+                "enum": [
+                  "US",
+                  "EU",
+                  "CA",
+                  "AP",
+                  "AU",
+                  "BR"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": []
+      }
+    },
+    "/api/verify/{agent_id}": {
+      "get": {
+        "summary": "Verify agent passport",
+        "description": "Hot path verification with KV-only reads, multi-region/multi-tenant support, and comprehensive performance monitoring. Returns passport data with caching and high availability.",
+        "operationId": "verifyAgentPassport",
+        "tags": [
+          "Verification"
+        ],
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Path parameter: agent_id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/verify/attestation/{attestation_id}": {
+      "get": {
+        "summary": "Verify an attestation",
+        "description": "Public endpoint to verify attestations cryptographically without requiring authentication. Provides cryptographic verification of attestations and their Verifiable Attestation chain.",
+        "operationId": "verifyAttestationPublic",
+        "tags": [
+          "Public"
+        ],
+        "parameters": [
+          {
+            "name": "attestation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Path parameter: attestation_id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/verify/decisions/{agent_id}": {
+      "get": {
+        "summary": "Verify policy decisions for an agent",
+        "description": "Comprehensive verification of policy decisions with Merkle tree, chain integrity, and cross-reference validation",
+        "operationId": "verifyAgentDecisions",
+        "tags": [
+          "Verification"
+        ],
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Path parameter: agent_id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/verify/policy/{pack_id}": {
+      "post": {
+        "summary": "Verify policy decision",
+        "description": "Hot path policy verification with KV-only reads, multi-region/multi-tenant support, TenantDO integration for refunds, and comprehensive performance monitoring. Evaluates policy decisions based on agent capabilities and context.",
+        "operationId": "verifyPolicyDecision",
+        "tags": [
+          "Verification"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "pack_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Path parameter: pack_id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "context"
+                ],
+                "properties": {
+                  "context": {
+                    "type": "object",
+                    "description": "Policy-specific context data"
+                  },
+                  "required": {
+                    "properties": {}
+                  },
+                  "agent_id": {
+                    "type": "string",
+                    "description": "The agent ID to verify against",
+                    "example": "aeebc92d-13fb-4e23-8c3c-1aa82b167da6"
+                  },
+                  "policy_id": {
+                    "type": "string",
+                    "description": "The specific policy being evaluated",
+                    "example": "payments.refund.v1"
+                  },
+                  "example": {},
+                  "idempotency_key": {
+                    "type": "string",
+                    "description": "Idempotency key for duplicate request prevention",
+                    "example": "idemp_123456789"
+                  },
+                  "passport_data": {
+                    "type": "object",
+                    "description": "Optional passport data for offline verification"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/webhooks/{webhook_id}/rotate": {
+      "post": {
+        "summary": "Rotate webhook secret",
+        "description": "Generate a new secret for the webhook",
+        "operationId": "rotateWebhookSecret",
+        "tags": [
+          "Webhooks"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "webhook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Path parameter: webhook_id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/webhooks/{webhook_id}/test": {
+      "post": {
+        "summary": "Test webhook endpoint",
+        "description": "Send a test ping to the webhook endpoint",
+        "operationId": "testWebhook",
+        "tags": [
+          "Webhooks"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "webhook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Path parameter: webhook_id"
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "event_type": {
+                    "type": "string",
+                    "enum": [
+                      "status.changed",
+                      "passport.updated",
+                      "assurance.updated",
+                      "attestation.created",
+                      "attestation.verified",
+                      "instance.created",
+                      "instance.suspended"
+                    ],
+                    "description": "Event type to test with"
+                  }
+                },
+                "enum": [
+                  "status.changed",
+                  "passport.updated",
+                  "assurance.updated",
+                  "attestation.created",
+                  "attestation.verified",
+                  "instance.created",
+                  "instance.suspended"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/webhooks/{webhook_id}": {
+      "get": {
+        "summary": "Get webhook details",
+        "description": "Get details of a specific webhook",
+        "operationId": "getWebhook",
+        "tags": [
+          "Webhooks"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "webhook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Path parameter: webhook_id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/webhooks": {
+      "post": {
+        "summary": "Create a new webhook",
+        "description": "Register a webhook endpoint for receiving notifications",
+        "operationId": "createWebhook",
+        "tags": [
+          "Webhooks"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "target": {
+                    "type": "string",
+                    "enum": [
+                      "user",
+                      "org",
+                      "agent"
+                    ],
+                    "description": "The type of entity this webhook is for"
+                  },
+                  "target_id": {
+                    "type": "string",
+                    "description": "The ID of the target entity"
+                  },
+                  "agent_id": {
+                    "type": "string",
+                    "description": "Optional agent ID for agent-level overrides"
+                  },
+                  "url": {
+                    "type": "string",
+                    "description": "The webhook endpoint URL"
+                  },
+                  "secret": {
+                    "type": "string",
+                    "description": "Secret for signing webhook payloads"
+                  },
+                  "events": {
+                    "type": "array"
+                  },
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "status.changed",
+                      "passport.updated",
+                      "assurance.updated",
+                      "attestation.created",
+                      "attestation.verified",
+                      "instance.created",
+                      "instance.suspended"
+                    ],
+                    "description": "List of events to subscribe to"
+                  },
+                  "active": {
+                    "type": "boolean",
+                    "description": "Whether the webhook is active"
+                  },
+                  "retry_attempts": {
+                    "type": "integer",
+                    "description": "Number of retry attempts"
+                  },
+                  "timeout_ms": {
+                    "type": "integer",
+                    "description": "Request timeout in milliseconds"
+                  },
+                  "required": {}
+                },
+                "enum": [
+                  "user",
+                  "org",
+                  "agent"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Passport": {
+        "type": "object",
+        "required": [
+          "agent_id",
+          "owner_id",
+          "owner_type",
+          "role",
+          "capabilities",
+          "limits",
+          "regions",
+          "status",
+          "contact"
+        ],
+        "properties": {
+          "agent_id": {
+            "type": "string",
+            "description": "Unique identifier for the AI agent",
+            "example": "aeebc92d-13fb-4e23-8c3c-1aa82b167da6"
+          },
+          "slug": {
+            "type": "string",
+            "description": "URL-friendly identifier",
+            "example": "acme-support-bot"
+          },
+          "name": {
+            "type": "string",
+            "description": "Human-readable name",
+            "example": "Acme Support Bot"
+          },
+          "owner_id": {
+            "type": "string",
+            "description": "Owner identifier",
+            "example": "ap_user_456"
+          },
+          "owner_type": {
+            "type": "string",
+            "enum": [
+              "user",
+              "org"
+            ],
+            "example": "org"
+          },
+          "role": {
+            "type": "string",
+            "description": "Functional role",
+            "example": "agent"
+          },
+          "description": {
+            "type": "string",
+            "description": "Agent description",
+            "example": "Customer support automation agent"
+          },
+          "capabilities": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "enum": [
+                    "payments.refund",
+                    "data.export",
+                    "messaging.send",
+                    "repo.pr.create",
+                    "repo.merge"
+                  ]
+                },
+                "params": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            },
+            "description": "Agent capabilities"
+          },
+          "limits": {
+            "type": "object",
+            "properties": {
+              "refund_amount_max_per_tx": {
+                "type": "number",
+                "description": "Max refund per transaction (USD cents)"
+              },
+              "refund_amount_daily_cap": {
+                "type": "number",
+                "description": "Max daily refunds (USD cents)"
+              },
+              "max_export_rows": {
+                "type": "number",
+                "description": "Max rows in exports"
+              },
+              "allow_pii": {
+                "type": "boolean",
+                "description": "PII access allowed"
+              },
+              "msgs_per_day": {
+                "type": "number",
+                "description": "Max messages per day"
+              },
+              "max_prs_per_day": {
+                "type": "number",
+                "description": "Max PRs per day"
+              }
+            },
+            "description": "Agent limits configuration"
+          },
+          "regions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Geographic regions",
+            "example": [
+              "global",
+              "us-east"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "active",
+              "suspended",
+              "revoked"
+            ],
+            "description": "Current status",
+            "example": "active"
+          },
+          "contact": {
+            "type": "string",
+            "description": "Contact information",
+            "example": "admin@acme.com"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Creation timestamp"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Last update timestamp"
+          },
+          "version": {
+            "type": "string",
+            "description": "Schema version",
+            "example": "1.0.0"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Error code",
+            "example": "not_found"
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable error message",
+            "example": "Agent passport not found"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "apiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key"
+      },
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key"
+      }
+    }
+  }
+};
+
+export const onRequestOptions: PagesFunction<Env> = async ({ request }) => {
+  const headers = cors(request as Request);
+  return new Response(null, { headers });
+};
+
+export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
+  const headers = cors(request as Request);
+
+  try {
+    // Use the generated OpenAPI spec
+    const spec = { ...OPENAPI_SPEC };
+    
+    // Update version from environment if available
+    if (env.AP_VERSION) {
+      spec.info.version = env.AP_VERSION;
+    }
+    
+    // Update server URLs based on environment
+    spec.servers = [
+      {
+        url: "https://aport.io",
+        description: "Production server",
+      },
+      {
+        url: "https://aport.io",
+        description: "Development server",
+      },
+      {
+        url: "http://localhost:8787",
+        description: "Local development server",
+      },
+    ];
+
+    // Return the OpenAPI spec
+    return new Response(JSON.stringify(spec, null, 2), {
+      headers: {
+        ...headers,
+        "content-type": "application/json",
+      },
+    });
+  } catch (error) {
+    console.error("Failed to serve OpenAPI specification:", error);
+    return new Response(
+      JSON.stringify({
+        error: "internal_server_error",
+        message: "Failed to serve OpenAPI specification",
+      }),
+      {
+        status: 500,
+        headers: {
+          ...headers,
+          "content-type": "application/json",
+        },
+      }
+    );
+  }
+};

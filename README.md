@@ -1,69 +1,40 @@
-# APort SDK
+# APort SDKs
 
-Official SDK for APort agent verification and policy enforcement.
+Official SDKs and middleware for the AI Agent Passport Registry.
 
-## 📦 Packages
-
-- **Node.js** - `@aport/sdk-node` - TypeScript/JavaScript SDK
-- **Python** - `aport-sdk` - Python SDK with type hints
-- **Express Middleware** - `@aport/express-middleware` - Express.js integration
-- **FastAPI Middleware** - `aport-fastapi-middleware` - FastAPI integration
-
-## 🚀 Quick Start
+## Packages
 
 ### Node.js
-```bash
-pnpm install @aport/sdk-node
-```
-
-```typescript
-import { APortClient } from '@aport/sdk-node';
-
-const client = new APortClient('https://aport.io');
-const passport = await client.getPassport('agent-id');
-```
+- **SDK**: [@aporthq/sdk-node](sdk/node/) - Core Node.js SDK
+- **Middleware**: [@aporthq/middleware-express](middleware/express/) - Express.js middleware
 
 ### Python
-```bash
-pip install aport-sdk
-```
+- **SDK**: [aporthq-sdk-python](sdk/python/) - Core Python SDK  
+- **Middleware**: [agent-passport-middleware-fastapi](middleware/fastapi/) - FastAPI middleware
 
-```python
-from aport_sdk import APortClient
+## Quick Start
 
-client = APortClient('https://aport.io')
-passport = client.get_passport('agent-id')
-```
+### Node.js
+\`\`\`bash
+npm install @aporthq/sdk-node
+npm install @aporthq/middleware-express
+\`\`\`
 
-## 🔗 Model Context Protocol (MCP)
+### Python
+\`\`\`bash
+pip install aporthq-sdk-python
+pip install agent-passport-middleware-fastapi
+\`\`\`
 
-APort supports MCP allowlists for secure agent tool access:
+## Documentation
 
-```typescript
-const passport = await client.getPassport('agent-id');
+Each package includes comprehensive documentation and examples.
 
-// MCP configuration
-console.log(passport.mcp.servers);  // Allowed MCP servers
-console.log(passport.mcp.tools);    // Allowed tools
-```
+## License
 
-### MCP Security Features
-- **Server Allowlists**: Whitelist trusted MCP servers
-- **Tool Restrictions**: Control specific tool access
-- **Policy Enforcement**: Automatic compliance checking
-- **Audit Trail**: Complete access logging
+MIT License - see [LICENSE](LICENSE) file.
 
-## 📚 Documentation
+## Support
 
-- [SDK Guide](https://aport.io/docs/sdk)
-- [API Reference](https://aport.io/docs/api)
-- [MCP Integration](https://aport.io/docs/mcp)
-- [Examples](https://github.com/aporthq/aport-sdk/tree/main/examples)
-
-## 🤝 Contributing
-
-The SDK is maintained in the main APort repository. Changes are automatically published here.
-
-## 📄 License
-
-MIT License - see LICENSE file for details.
+- Issues: https://github.com/aporthq/agent-passport/issues
+- Email: support@aport.io
