@@ -134,7 +134,7 @@ interface Env {
  *                   example: true
  *                 agent_id:
  *                   type: string
- *                   example: "aeebc92d-13fb-4e23-8c3c-1aa82b167da645678"
+ *                   example: "ap_128094d345678"
  *                 claimed:
  *                   type: boolean
  *                   example: false

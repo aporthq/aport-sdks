@@ -26,7 +26,7 @@ export async function evaluateMessagingV1(
       allow: false,
       reasons: [
         {
-          code: "AGENT_SUSPENDED",
+          code: "oap.passport_suspended",
           message: `Agent is ${passport.status} and cannot perform operations`,
           severity: "error",
         },
@@ -45,14 +45,17 @@ export async function evaluateMessagingV1(
   if (!hasMessagingCapability) {
     allow = false;
     reasons.push({
-      code: "INSUFFICIENT_CAPABILITIES",
+      code: "oap.unknown_capability",
       message: "Missing required capability: messaging.send",
       severity: "error",
     });
   }
 
   // 2. Check rate limits (messages per minute)
-  const msgsPerMin = passport.limits?.msgs_per_min || 10;
+  const msgsPerMin =
+    passport.limits?.messaging?.msgs_per_min ??
+    passport.limits?.msgs_per_min ??
+    10;
   const currentMinute = new Date().toISOString().substring(0, 16); // YYYY-MM-DDTHH:MM
   const minuteKey = `msgs:${passport.agent_id}:${currentMinute}`;
 
@@ -60,7 +63,7 @@ export async function evaluateMessagingV1(
   if (currentCount >= msgsPerMin) {
     allow = false;
     reasons.push({
-      code: "RATE_LIMIT_EXCEEDED",
+      code: "oap.rate_limit_exceeded",
       message: `Message rate limit exceeded: ${currentCount}/${msgsPerMin} per minute`,
       severity: "error",
     });
@@ -69,7 +72,10 @@ export async function evaluateMessagingV1(
   }
 
   // 3. Check daily limits (messages per day)
-  const msgsPerDay = passport.limits?.msgs_per_day || 1000;
+  const msgsPerDay =
+    passport.limits?.messaging?.msgs_per_day ??
+    passport.limits?.msgs_per_day ??
+    1000;
   const today = new Date().toISOString().substring(0, 10); // YYYY-MM-DD
   const dailyKey = `msgs:${passport.agent_id}:${today}`;
 
@@ -77,7 +83,7 @@ export async function evaluateMessagingV1(
   if (dailyCount >= msgsPerDay) {
     allow = false;
     reasons.push({
-      code: "DAILY_LIMIT_EXCEEDED",
+      code: "oap.rate_limit_exceeded",
       message: `Daily message limit exceeded: ${dailyCount}/${msgsPerDay}`,
       severity: "error",
     });
@@ -94,7 +100,7 @@ export async function evaluateMessagingV1(
   ) {
     allow = false;
     reasons.push({
-      code: "CHANNEL_NOT_ALLOWED",
+      code: "oap.channel_forbidden",
       message: `Channel ${context.channel} is not allowed`,
       severity: "error",
     });
@@ -107,7 +113,7 @@ export async function evaluateMessagingV1(
     if (!allowEveryone) {
       allow = false;
       reasons.push({
-        code: "EVERYONE_MENTION_DENIED",
+        code: "oap.mention_forbidden",
         message: "@everyone mentions are not allowed",
         severity: "error",
       });
@@ -119,7 +125,7 @@ export async function evaluateMessagingV1(
   if (!meetsMinimumAssurance(agentAssurance, "L1")) {
     allow = false;
     reasons.push({
-      code: "INSUFFICIENT_ASSURANCE",
+      code: "oap.assurance_insufficient",
       message: `Required assurance level L1 not met (current: ${agentAssurance})`,
       severity: "error",
     });

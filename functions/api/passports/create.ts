@@ -374,15 +374,9 @@ export const onRequestOptions: PagesFunction<any> = async ({ request }) => {
   });
 };
 
-export const onRequestPost = async ({
-  request,
-  env,
-  ctx,
-}: {
-  request: Request;
-  env: any;
-  ctx: any;
-}) => {
+export const onRequestPost: PagesFunction<any> = async ({ request, env }) => {
+  console.log("POST /api/passports endpoint called");
+
   const requestId = `req_${Date.now()}_${Math.random()
     .toString(36)
     .substr(2, 9)}`;
@@ -401,7 +395,10 @@ export const onRequestPost = async ({
   try {
     // Handle CORS
     if (request.method === "OPTIONS") {
-      return cors(request);
+      return new Response(null, {
+        status: 200,
+        headers: cors(request),
+      });
     }
 
     // Rate limiting
@@ -488,11 +485,15 @@ export const onRequestPost = async ({
     const tenant = await resolveTenantFromOrgId(env, ownerId);
     const bindings = resolveTenantBindings(env, tenant);
 
-    // Use resolved KV for operations
+    // Use resolved KV for operations - this is the correct multi-tenant approach
+    const kv = bindings.kv || env.ai_passport_registry;
 
-    // Get tenant-specific KV (fallback to default for admin operations)
-    // For now, always use default KV to ensure consistency with other endpoints
-    const kv = env.ai_passport_registry;
+    console.log("Create endpoint KV resolution:", {
+      bindingsKV: bindings.kv,
+      defaultKV: env.ai_passport_registry,
+      usingKV: kv,
+      isDefault: kv === env.ai_passport_registry,
+    });
 
     // Determine owner type from owner ID
     const ownerType = ownerId.startsWith("ap_org_") ? "org" : "user";
@@ -509,10 +510,18 @@ export const onRequestPost = async ({
       });
     }
 
-    // Create TenantDO client
+    // Create TenantDO client with multi-region/multi-tenant bindings
+    console.log("Creating TenantDO client with KV:", kv);
+    console.log("Resolved bindings:", bindings);
+    console.log("Tenant:", tenant);
+
     const tenantDO = createTenantDOClientFromEnv(env, ownerId, {
       timeout: 10000,
       maxRetries: 3,
+      kv: kv, // Use the resolved KV namespace
+      r2: bindings.r2 || env.PASSPORT_SNAPSHOTS_BUCKET,
+      region: tenant.region || env.DEFAULT_REGION || "US",
+      version: env.AP_VERSION || "1.0.0",
     });
 
     // Initialize tenant with region-specific bindings
@@ -597,16 +606,16 @@ export const onRequestPost = async ({
     // Get previous hash for audit chain
     const prevHash = await getLastActionHash(kv, agentId);
 
-    // Create passport through TenantDO
+    // Create passport through TenantDO (now handles storage fallback automatically)
+    console.log("About to call tenantDO.createPassport with passport:", {
+      agent_id: passport.agent_id,
+      name: passport.name,
+      owner_id: passport.owner_id,
+    });
+
     const result = await tenantDO.createPassport(passport);
 
-    // Also write passport data directly to KV (since TenantDO stub doesn't write to KV)
-    await kv.put(`passport:${agentId}`, JSON.stringify(passport));
-
-    // Write agent routing information to KV for fast routing
-    // This is critical for multi-region/multi-tenant verify endpoints
-    const region = tenant.region || "US";
-    await writeAgentRouting(kv, agentId, ownerId, region, 1);
+    console.log("tenantDO.createPassport result:", result);
 
     // Complete audit action
     const completedAuditAction = await completeAuditAction(
@@ -615,56 +624,8 @@ export const onRequestPost = async ({
       env.REGISTRY_PRIVATE_KEY || ""
     );
 
-    // Update indexes
-    await updateIndexes(kv, agentId, passport.slug, passport.name);
-
-    // Write agent routing information for verify endpoint
-    // Write to both tenant-specific KV and default KV for compatibility
-    try {
-      // Write to tenant-specific KV
-      await writeAgentRouting(kv, agentId, ownerId, tenant.region || "US", 1);
-      console.log("Agent routing written to tenant KV successfully:", {
-        agentId,
-        ownerId,
-        region: tenant.region,
-      });
-
-      // Also write to default KV for verify endpoint compatibility
-      await writeAgentRouting(
-        env.ai_passport_registry,
-        agentId,
-        ownerId,
-        tenant.region || "US",
-        1
-      );
-      console.log("Agent routing written to default KV successfully:", {
-        agentId,
-        ownerId,
-        region: tenant.region,
-      });
-    } catch (error) {
-      console.error("Failed to write agent routing:", error);
-      // Don't fail the request, just log the error
-    }
-
-    // Schedule KV refresh and R2 backup asynchronously
-    scheduleKVRefresh({
-      agentId: result.agent_id,
-      passportData: result,
-      kv: bindings.kv || env.ai_passport_registry,
-      env,
-      ctx,
-    });
-
-    scheduleR2Backup(
-      result.agent_id,
-      result,
-      bindings.r2 || env.APORT_R2,
-      tenant.region || "US",
-      env,
-      ctx
-    );
-    console.log("result", result);
+    // Note: All storage operations (KV, R2, indexes, agent routing) are now handled by TenantDO fallback
+    console.log("Final result", result);
 
     // Return success response with CORS headers
     const responseData = {

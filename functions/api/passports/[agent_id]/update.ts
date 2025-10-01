@@ -18,7 +18,7 @@
  *         schema:
  *           type: string
  *           pattern: "^ap_[a-zA-Z0-9]+$"
- *           example: "aeebc92d-13fb-4e23-8c3c-1aa82b167da6"
+ *           example: "ap_128094d3"
  *     requestBody:
  *       required: true
  *       content:
@@ -272,7 +272,7 @@
  *               $ref: '#/components/schemas/ErrorResponse'
  *             example:
  *               error: "not_found"
- *               message: "Passport with ID aeebc92d-13fb-4e23-8c3c-1aa82b167da6 not found"
+ *               message: "Passport with ID ap_128094d3 not found"
  *       409:
  *         description: Conflict - update conflicts with existing data
  *         content:
@@ -407,7 +407,7 @@ export const onRequestOptions: PagesFunction<any> = async ({ request }) => {
   });
 };
 
-export const onRequestPut = async ({
+export const onRequestPatch = async ({
   request,
   env,
   ctx,
@@ -517,6 +517,9 @@ export const onRequestPut = async ({
       return response.badRequest(validation.error!, undefined, { requestId });
     }
 
+    // Capture skipped fields for response
+    const skippedFields = validation.skippedFields;
+
     // Check resource access
     const resourceCheck = canAccessResource(authResult.user!, {
       resourceOwnerId: ownerId,
@@ -567,10 +570,14 @@ export const onRequestPut = async ({
     }
     console.log("Owner validation", ownerValidation);
 
-    // Create TenantDO client
+    // Create TenantDO client with multi-region/multi-tenant bindings
     const tenantDO = createTenantDOClientFromEnv(env, ownerId, {
       timeout: 10000,
       maxRetries: 3,
+      kv: bindings.kv || env.ai_passport_registry,
+      r2: bindings.r2 || env.PASSPORT_SNAPSHOTS_BUCKET,
+      region: tenant.region || env.DEFAULT_REGION || "US",
+      version: env.AP_VERSION || "1.0.0",
     });
 
     // Initialize tenant with region-specific bindings
@@ -616,7 +623,7 @@ export const onRequestPut = async ({
     // Get previous hash for audit chain
     const prevHash = await getLastActionHash(kv, agent_id);
 
-    // Update passport through TenantDO
+    // Update passport through TenantDO (now handles storage fallback automatically)
     const result = await tenantDO.updatePassport(
       updatedPassport,
       (body as any).expected_version || 1
@@ -695,14 +702,22 @@ export const onRequestPut = async ({
     }
 
     // Return success response
-    return response.success(
-      {
-        ...result,
-        audit_id: completedAuditAction.id,
-      },
-      200,
-      "Passport updated successfully"
-    );
+    const responseData: any = {
+      ...result,
+      audit_id: completedAuditAction.id,
+    };
+
+    // Include skipped fields information if any
+    if (skippedFields && skippedFields.length > 0) {
+      responseData.skipped_fields = skippedFields;
+      responseData.message = `Passport updated successfully. Skipped restricted fields: ${skippedFields.join(
+        ", "
+      )}`;
+    } else {
+      responseData.message = "Passport updated successfully";
+    }
+
+    return response.success(responseData, 200, responseData.message);
   } catch (error) {
     console.log("Passport update failed", {
       error: error instanceof Error ? error.message : "Unknown error",
@@ -724,6 +739,21 @@ export const onRequestPut = async ({
   }
 };
 
+export const onRequestPut = async ({
+  request,
+  env,
+  ctx,
+  params,
+}: {
+  request: Request;
+  env: any;
+  ctx: any;
+  params: any;
+}) => {
+  // Delegate to the PATCH handler since they have the same logic
+  return onRequestPatch({ request, env, ctx, params });
+};
+
 // ============================================================================
 // Helper Functions
 // ============================================================================
@@ -733,7 +763,7 @@ async function validateUpdateRequest(
   agent_id: string,
   isAdmin: boolean = false,
   currentPassport?: any
-): Promise<{ valid: boolean; error?: string }> {
+): Promise<{ valid: boolean; error?: string; skippedFields?: string[] }> {
   // agent_id is now provided in URL path, not required in body
 
   if (!body.owner_id) {
@@ -775,11 +805,14 @@ async function validateUpdateRequest(
     }
   }
 
-  // Validate admin-only fields
+  // Validate admin-only fields (now skips restricted fields instead of failing)
   const adminValidation = ValidationUtils.validateAdminFields(body, isAdmin);
   if (!adminValidation.valid) {
     return { valid: false, error: adminValidation.error };
   }
+
+  // Capture skipped fields for response
+  const skippedFields = adminValidation.skippedFields;
 
   // Validate assurance level changes (admin-only for high levels)
   if (body.assurance_level && currentPassport) {
@@ -818,7 +851,7 @@ async function validateUpdateRequest(
     }
   }
 
-  return { valid: true };
+  return { valid: true, skippedFields };
 }
 
 async function getCurrentPassport(env: any, agent_id: string): Promise<any> {

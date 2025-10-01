@@ -56,7 +56,7 @@ async def process_refund(request: Request):
 ```python
 from agent_passport_middleware import require_policy, require_policy_with_context
 
-AGENT_ID = "aeebc92d-13fb-4e23-8c3c-1aa82b167da645678"  # Your agent ID
+AGENT_ID = "ap_128094d345678"  # Your agent ID
 
 # Explicit agent ID (preferred)
 @app.post("/api/refunds")
@@ -149,7 +149,7 @@ After successful policy verification, the request object contains:
 @app.post("/api/refunds")
 async def process_refund(request: Request):
     # request.state.agent - Verified agent passport data
-    print(request.state.agent.agent_id)        # "aeebc92d-13fb-4e23-8c3c-1aa82b167da645678"
+    print(request.state.agent.agent_id)        # "ap_128094d345678"
     print(request.state.agent.assurance_level) # "L2"
     print(request.state.agent.capabilities)    # ["payments.refund"]
     
@@ -203,7 +203,7 @@ The middleware returns appropriate HTTP status codes:
 {
     "error": "policy_violation",
     "message": "Policy violation",
-    "agent_id": "aeebc92d-13fb-4e23-8c3c-1aa82b167da645678",
+    "agent_id": "ap_128094d345678",
     "policy_id": "payments.refund.v1"
 }
 
@@ -223,7 +223,7 @@ The middleware returns appropriate HTTP status codes:
 AGENT_PASSPORT_BASE_URL=https://aport.io
 
 # Default agent ID for development (optional)
-AGENT_PASSPORT_AGENT_ID=aeebc92d-13fb-4e23-8c3c-1aa82b167da645678
+AGENT_PASSPORT_AGENT_ID=ap_128094d345678
 ```
 
 ### Skip Paths
@@ -248,7 +248,7 @@ from agent_passport_middleware import require_policy
 
 app = FastAPI()
 
-AGENT_ID = "aeebc92d-13fb-4e23-8c3c-1aa82b167da645678"
+AGENT_ID = "ap_128094d345678"
 
 # Refund processing with policy enforcement
 app.middleware("http")(require_policy("payments.refund.v1", AGENT_ID))

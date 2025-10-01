@@ -378,11 +378,11 @@ const OPENAPI_SPEC = {
         "parameters": []
       }
     },
-    "/api/passports/{agent_id}/status": {
-      "put": {
-        "summary": "Update passport status",
-        "description": "Changes the status of an existing passport (suspend, activate, revoke) with comprehensive validation, Verifiable Attestation, and admin support. Triggers webhooks and cache invalidation.",
-        "operationId": "updatePassportStatus",
+    "/api/passports/{agent_id}": {
+      "get": {
+        "summary": "Get passport details",
+        "description": "Retrieves detailed information about a specific agent passport by agent ID. Supports user, organization, and admin access.",
+        "operationId": "getPassportDetails",
         "tags": [
           "Passports"
         ],
@@ -402,73 +402,6 @@ const OPENAPI_SPEC = {
             "description": "Path parameter: agent_id"
           }
         ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "agent_id",
-                  "owner_id",
-                  "status"
-                ],
-                "properties": {
-                  "agent_id": {
-                    "type": "string",
-                    "description": "The agent passport ID (must match path parameter)",
-                    "example": "aeebc92d-13fb-4e23-8c3c-1aa82b167da6"
-                  },
-                  "owner_id": {
-                    "type": "string",
-                    "description": "The owner ID of the passport",
-                    "example": "ap_org_456"
-                  },
-                  "status": {
-                    "type": "string",
-                    "description": "New status for the passport",
-                    "enum": [
-                      "draft",
-                      "active",
-                      "suspended",
-                      "revoked"
-                    ],
-                    "example": "suspended"
-                  },
-                  "reason": {
-                    "type": "string",
-                    "description": "Reason for the status change",
-                    "example": "Policy violation detected"
-                  },
-                  "admin_notes": {
-                    "type": "string",
-                    "description": "Admin-only notes (requires admin token)",
-                    "example": "Suspended due to suspicious activity"
-                  },
-                  "force_change": {
-                    "type": "boolean",
-                    "description": "Force status change even if validation fails (admin only)"
-                  },
-                  "notify_owner": {
-                    "type": "boolean",
-                    "description": "Whether to notify the passport owner of the status change"
-                  },
-                  "webhook_data": {
-                    "type": "object",
-                    "description": "Additional data to include in webhook notifications",
-                    "example": "{source: admin_panel, admin_user: admin@company.com}"
-                  }
-                },
-                "enum": [
-                  "draft",
-                  "active",
-                  "suspended",
-                  "revoked"
-                ]
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
             "description": "Success"
@@ -484,9 +417,7 @@ const OPENAPI_SPEC = {
             }
           }
         }
-      }
-    },
-    "/api/passports/{agent_id}": {
+      },
       "put": {
         "summary": "Update an existing passport",
         "description": "Updates an existing agent passport with comprehensive validation, Verifiable Attestation, and admin support. Supports partial updates and admin overrides.",
@@ -706,6 +637,114 @@ const OPENAPI_SPEC = {
                   "assistant",
                   "tool",
                   "service"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/passports/{agent_id}/status": {
+      "put": {
+        "summary": "Update passport status",
+        "description": "Changes the status of an existing passport (suspend, activate, revoke) with comprehensive validation, Verifiable Attestation, and admin support. Triggers webhooks and cache invalidation.",
+        "operationId": "updatePassportStatus",
+        "tags": [
+          "Passports"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Path parameter: agent_id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "agent_id",
+                  "owner_id",
+                  "status"
+                ],
+                "properties": {
+                  "agent_id": {
+                    "type": "string",
+                    "description": "The agent passport ID (must match path parameter)",
+                    "example": "ap_128094d3"
+                  },
+                  "owner_id": {
+                    "type": "string",
+                    "description": "The owner ID of the passport",
+                    "example": "ap_org_456"
+                  },
+                  "status": {
+                    "type": "string",
+                    "description": "New status for the passport",
+                    "enum": [
+                      "draft",
+                      "active",
+                      "suspended",
+                      "revoked"
+                    ],
+                    "example": "suspended"
+                  },
+                  "reason": {
+                    "type": "string",
+                    "description": "Reason for the status change",
+                    "example": "Policy violation detected"
+                  },
+                  "admin_notes": {
+                    "type": "string",
+                    "description": "Admin-only notes (requires admin token)",
+                    "example": "Suspended due to suspicious activity"
+                  },
+                  "force_change": {
+                    "type": "boolean",
+                    "description": "Force status change even if validation fails (admin only)"
+                  },
+                  "notify_owner": {
+                    "type": "boolean",
+                    "description": "Whether to notify the passport owner of the status change"
+                  },
+                  "webhook_data": {
+                    "type": "object",
+                    "description": "Additional data to include in webhook notifications",
+                    "example": "{source: admin_panel, admin_user: admin@company.com}"
+                  }
+                },
+                "enum": [
+                  "draft",
+                  "active",
+                  "suspended",
+                  "revoked"
                 ]
               }
             }
@@ -1223,6 +1262,37 @@ const OPENAPI_SPEC = {
         "parameters": []
       }
     },
+    "/api/passports/list": {
+      "get": {
+        "summary": "List agent passports",
+        "description": "Lists agent passports for the authenticated user/organization. Admin users can list all passports in the database.",
+        "operationId": "listPassports",
+        "tags": [
+          "Passports"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/policies/{policy_name}": {
       "get": {
         "summary": "Get a policy pack by name and version",
@@ -1467,9 +1537,9 @@ const OPENAPI_SPEC = {
     },
     "/api/verify/{agent_id}": {
       "get": {
-        "summary": "Verify agent passport",
-        "description": "Hot path verification with KV-only reads, multi-region/multi-tenant support, and comprehensive performance monitoring. Returns passport data with caching and high availability.",
-        "operationId": "verifyAgentPassport",
+        "summary": "Verify an agent passport",
+        "description": "Retrieve and verify an AI agent passport by ID",
+        "operationId": "verifyAgent",
         "tags": [
           "Verification"
         ],
@@ -1617,7 +1687,7 @@ const OPENAPI_SPEC = {
                   "agent_id": {
                     "type": "string",
                     "description": "The agent ID to verify against",
-                    "example": "aeebc92d-13fb-4e23-8c3c-1aa82b167da6"
+                    "example": "ap_128094d3"
                   },
                   "policy_id": {
                     "type": "string",
@@ -1935,7 +2005,7 @@ const OPENAPI_SPEC = {
           "agent_id": {
             "type": "string",
             "description": "Unique identifier for the AI agent",
-            "example": "aeebc92d-13fb-4e23-8c3c-1aa82b167da6"
+            "example": "ap_128094d3"
           },
           "slug": {
             "type": "string",

@@ -50,31 +50,48 @@ export function resolveTenantBindings(
 ): TenantBindings {
   const region = tenant.region || env.DEFAULT_REGION || "US";
 
+  console.log("resolveTenantBindings called with:", {
+    tenantRegion: tenant.region,
+    defaultRegion: env.DEFAULT_REGION,
+    resolvedRegion: region,
+    tenantId: tenant.tenant_id,
+  });
+
   switch (region.toUpperCase()) {
     case "EU":
-      return {
+      const euBindings = {
         d1: env[env.D1_EU_BINDING || "D1_EU"],
         kv: env[env.KV_EU_BINDING || "KV_EU"],
         r2: env[env.R2_EU_BINDING || "R2_EU"],
         region: "EU",
       };
+      console.log("EU bindings resolved:", euBindings);
+      return euBindings;
 
     case "CA":
-      return {
+      const caBindings = {
         d1: env[env.D1_CA_BINDING || "D1_CA"],
         kv: env[env.KV_CA_BINDING || "KV_CA"],
         r2: env[env.R2_CA_BINDING || "R2_CA"],
         region: "CA",
       };
+      console.log("CA bindings resolved:", caBindings);
+      return caBindings;
 
     case "US":
     default:
-      return {
+      const usBindings = {
         d1: env[env.D1_US_BINDING || "D1_US"],
         kv: env[env.KV_US_BINDING || "KV_US"],
         r2: env[env.R2_US_BINDING || "R2_US"],
         region: "US",
       };
+      console.log("US bindings resolved:", usBindings);
+      console.log(
+        "Available env keys:",
+        Object.keys(env).filter((k) => k.includes("KV"))
+      );
+      return usBindings;
   }
 }
 

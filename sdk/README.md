@@ -36,11 +36,11 @@ npm install @agent-passport/sdk-node
 import { withAgentPassportId, verifyAgentPassport } from '@agent-passport/sdk-node';
 
 // Wrap fetch to automatically include agent passport header
-const fetchWithAgent = withAgentPassportId('aeebc92d-13fb-4e23-8c3c-1aa82b167da64567890abcdef');
+const fetchWithAgent = withAgentPassportId('ap_128094d34567890abcdef');
 const response = await fetchWithAgent('https://api.example.com/data');
 
 // Verify agent passport
-const agent = await verifyAgentPassport('aeebc92d-13fb-4e23-8c3c-1aa82b167da64567890abcdef');
+const agent = await verifyAgentPassport('ap_128094d34567890abcdef');
 ```
 
 ### Python
@@ -53,12 +53,12 @@ pip install agent-passport-sdk
 from agent_passport import agent_session, AgentPassportClient
 
 # Use agent session for automatic header injection
-with agent_session('aeebc92d-13fb-4e23-8c3c-1aa82b167da64567890abcdef') as session:
+with agent_session('ap_128094d34567890abcdef') as session:
     response = session.get('https://api.example.com/data')
 
 # Or use client for verification
 client = AgentPassportClient()
-agent = client.verify_agent_passport('aeebc92d-13fb-4e23-8c3c-1aa82b167da64567890abcdef')
+agent = client.verify_agent_passport('ap_128094d34567890abcdef')
 ```
 
 ### Express.js Middleware
@@ -132,7 +132,7 @@ x-agent-passport-id: <agent_id>
 
 ### WebSocket/SSE
 ```
-ws://api.example.com/stream?agent_id=aeebc92d-13fb-4e23-8c3c-1aa82b167da64567890abcdef
+ws://api.example.com/stream?agent_id=ap_128094d34567890abcdef
 ```
 
 ### Message Queues
@@ -140,7 +140,7 @@ ws://api.example.com/stream?agent_id=aeebc92d-13fb-4e23-8c3c-1aa82b167da64567890
 {
   "MessageAttributes": {
     "agent_id": {
-      "StringValue": "aeebc92d-13fb-4e23-8c3c-1aa82b167da64567890abcdef",
+      "StringValue": "ap_128094d34567890abcdef",
       "DataType": "String"
     }
   }
@@ -149,7 +149,7 @@ ws://api.example.com/stream?agent_id=aeebc92d-13fb-4e23-8c3c-1aa82b167da64567890
 
 ### Environment Variables
 ```bash
-export AGENT_PASSPORT_ID=aeebc92d-13fb-4e23-8c3c-1aa82b167da64567890abcdef
+export AGENT_PASSPORT_ID=ap_128094d34567890abcdef
 ```
 
 ## 🛠️ Development
@@ -201,7 +201,6 @@ pytest
 5. Submit a pull request
 
 ## 📄 License
-
 MIT
 
 

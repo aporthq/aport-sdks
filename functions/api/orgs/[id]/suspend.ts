@@ -36,7 +36,7 @@ interface Env extends BaseEnv {}
  *         agent_id:
  *           type: string
  *           description: Agent ID to suspend/reactivate (must be sponsored by this org)
- *           example: "aeebc92d-13fb-4e23-8c3c-1aa82b167da645678"
+ *           example: "ap_128094d345678"
  *         status:
  *           type: string
  *           enum: [active, suspended]
@@ -61,7 +61,7 @@ interface Env extends BaseEnv {}
  *       properties:
  *         agent_id:
  *           type: string
- *           example: "aeebc92d-13fb-4e23-8c3c-1aa82b167da645678"
+ *           example: "ap_128094d345678"
  *         status:
  *           type: string
  *           enum: [active, suspended]

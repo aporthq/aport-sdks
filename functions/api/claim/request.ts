@@ -43,7 +43,7 @@ interface ClaimRequest {
  *               agent_id:
  *                 type: string
  *                 description: The agent passport ID to claim
- *                 example: "aeebc92d-13fb-4e23-8c3c-1aa82b167da6"
+ *                 example: "ap_128094d3"
  *               email:
  *                 type: string
  *                 format: email

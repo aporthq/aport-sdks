@@ -42,6 +42,7 @@ export interface RefundCurrencyLimit {
   daily_cap: number; // Daily limit in currency's smallest unit
 }
 
+import { AssuranceLevel } from "./assurance";
 /**
  * Typed limits interface with all valid keys
  */
@@ -71,6 +72,45 @@ export interface TypedLimits {
   allowed_base_branches?: string[];
   allowed_paths?: string[];
   requires_review?: boolean;
+  max_items_per_tx?: number;
+  allowed_merchant_ids?: string[];
+  allowed_countries?: string[];
+  blocked_categories?: string[];
+  require_assurance_at_least?: AssuranceLevel;
+  idempotency_required?: boolean;
+
+  // OAP-compliant nested limits structure
+  payments?: {
+    charge?: {
+      currency_limits?: Record<string, RefundCurrencyLimit>;
+      allowed_merchant_ids?: string[];
+      allowed_countries?: string[];
+      blocked_categories?: string[];
+      max_items_per_tx?: number;
+      require_assurance_at_least?: AssuranceLevel;
+      idempotency_required?: boolean;
+    };
+    refund?: {
+      supported_currencies?: string[];
+      currency_limits?: Record<string, RefundCurrencyLimit>;
+      refund_reason_codes?: string[];
+    };
+  };
+  data?: {
+    export?: {
+      max_export_rows?: number;
+      allow_pii?: boolean;
+    };
+  };
+  messaging?: {
+    msgs_per_min?: number;
+    msgs_per_day?: number;
+  };
+  repo?: {
+    max_prs_per_day?: number;
+    max_merges_per_day?: number;
+    max_pr_size_kb?: number;
+  };
 }
 
 /**

@@ -10,7 +10,7 @@
  */
 
 import { DurableObject } from "cloudflare:workers";
-import { D1Database } from "@cloudflare/workers-types";
+import { D1Database, KVNamespace, R2Bucket } from "@cloudflare/workers-types";
 import { createTenantDatabaseFactory } from "./database-factory-resolver";
 import {
   PassportRow,
@@ -24,6 +24,7 @@ import {
   ComplianceValidator,
 } from "../../types/compliance";
 import { resolveTenantBindings } from "./region";
+import { createPassportStorageService } from "../utils/passport-storage-service";
 // Note: In Cloudflare Workers, use Web Crypto API instead of Node.js crypto
 // import { createHash, randomBytes } from "crypto";
 
@@ -145,6 +146,7 @@ export class TenantDO extends DurableObject {
   private tenantId: string;
   private tenantState: TenantState;
   private dbFactory: any;
+  private storageService: any;
 
   constructor(state: DurableObjectState, env: any) {
     // Required, as we're extending the base class
@@ -161,6 +163,17 @@ export class TenantDO extends DurableObject {
 
     // Database factory will be initialized per-request with tenant-specific bindings
     this.dbFactory = null;
+
+    // Initialize storage service with tenant-specific bindings
+    this.storageService = createPassportStorageService(
+      env.ai_passport_registry,
+      {
+        r2: env.PASSPORT_SNAPSHOTS_BUCKET,
+        region: env.DEFAULT_REGION || "US",
+        version: env.AP_VERSION || "1.0.0",
+        tenantId: this.tenantId,
+      }
+    );
   }
 
   async fetch(request: Request): Promise<Response> {
@@ -310,7 +323,7 @@ export class TenantDO extends DurableObject {
           this.generateComplianceMetadata(passport.owner_id),
       };
 
-      // Create passport
+      // Create passport in D1
       await ctx.passports.create(passportWithCompliance);
 
       // Log decision event
@@ -333,6 +346,26 @@ export class TenantDO extends DurableObject {
         updated_at: new Date().toISOString(),
         record_hash: "",
       });
+
+      // Handle all multi-stage storage operations (KV, R2, indexes, caching)
+      const storageResult = await this.storageService.createPassport(
+        passportWithCompliance,
+        {
+          createBackup: true,
+          invalidateCache: true,
+          preWarmCache: true,
+          reason: "Passport created via TenantDO",
+          actor: "tenantdo",
+        }
+      );
+
+      if (!storageResult.success) {
+        console.error(
+          `Storage operations failed for passport ${passport.agent_id}:`,
+          storageResult.error
+        );
+        // Don't throw - D1 transaction is already committed, just log the error
+      }
 
       return passportWithCompliance;
     });
@@ -391,6 +424,27 @@ export class TenantDO extends DurableObject {
         record_hash: "",
       });
 
+      // Handle all multi-stage storage operations (KV, R2, indexes, caching)
+      const storageResult = await this.storageService.updatePassport(
+        updatedPassport,
+        current,
+        {
+          createBackup: true,
+          invalidateCache: true,
+          preWarmCache: true,
+          reason: "Passport updated via TenantDO",
+          actor: "tenantdo",
+        }
+      );
+
+      if (!storageResult.success) {
+        console.error(
+          `Storage operations failed for passport ${passport.agent_id}:`,
+          storageResult.error
+        );
+        // Don't throw - D1 transaction is already committed, just log the error
+      }
+
       return updatedPassport;
     });
   }
@@ -445,6 +499,28 @@ export class TenantDO extends DurableObject {
         updated_at: new Date().toISOString(),
         record_hash: "",
       });
+
+      // Handle all multi-stage storage operations (KV, R2, indexes, caching)
+      const storageResult = await this.storageService.changeStatus(
+        payload.agentId,
+        payload.status,
+        payload.reason,
+        {
+          createBackup: true,
+          invalidateCache: true,
+          preWarmCache: true,
+          reason: `Status changed to ${payload.status} via TenantDO`,
+          actor: "tenantdo",
+        }
+      );
+
+      if (!storageResult.success) {
+        console.error(
+          `Storage operations failed for passport ${payload.agentId}:`,
+          storageResult.error
+        );
+        // Don't throw - D1 transaction is already committed, just log the error
+      }
 
       return { success: true };
     });

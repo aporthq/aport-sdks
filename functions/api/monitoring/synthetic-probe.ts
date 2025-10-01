@@ -57,7 +57,7 @@ interface SyntheticProbeRequest {
  *           items:
  *             type: string
  *           description: List of agent IDs to probe
- *           example: ["aeebc92d-13fb-4e23-8c3c-1aa82b167da6", "ap_456"]
+ *           example: ["ap_128094d3", "ap_456"]
  *         regions:
  *           type: array
  *           items:
@@ -91,7 +91,7 @@ interface SyntheticProbeRequest {
  *             properties:
  *               agent_id:
  *                 type: string
- *                 example: "aeebc92d-13fb-4e23-8c3c-1aa82b167da6"
+ *                 example: "ap_128094d3"
  *               region:
  *                 type: string
  *                 example: "us-east-1"

@@ -76,20 +76,61 @@ export async function updateOwnerAgentsIndex(
 ): Promise<void> {
   try {
     const indexKey = `owner_agents:${ownerId}`;
+    console.log(
+      `updateOwnerAgentsIndex: ${action} agent ${agentId} for owner ${ownerId}`
+    );
+    console.log(`updateOwnerAgentsIndex: indexKey = ${indexKey}`);
+    console.log(`updateOwnerAgentsIndex: using KV namespace:`, kv);
+
     const indexData = await kv.get(indexKey, "json");
     const agentIds = (indexData as string[]) || [];
+    console.log(
+      `updateOwnerAgentsIndex: current agentIds = ${JSON.stringify(agentIds)}`
+    );
 
     if (action === "add") {
       if (!agentIds.includes(agentId)) {
         agentIds.push(agentId);
+        console.log(
+          `updateOwnerAgentsIndex: adding agent ${agentId}, new list = ${JSON.stringify(
+            agentIds
+          )}`
+        );
         await kv.put(indexKey, JSON.stringify(agentIds));
+        console.log(
+          `updateOwnerAgentsIndex: successfully updated index for owner ${ownerId}`
+        );
+
+        // Verify the index was written correctly
+        const verifyData = await kv.get(indexKey, "json");
+        const verifyIds = (verifyData as string[]) || [];
+        console.log(
+          `updateOwnerAgentsIndex: verification - index now contains ${
+            verifyIds.length
+          } agents: ${JSON.stringify(verifyIds)}`
+        );
+      } else {
+        console.log(
+          `updateOwnerAgentsIndex: agent ${agentId} already exists in index`
+        );
       }
     } else if (action === "remove") {
       const updatedIds = agentIds.filter((id) => id !== agentId);
+      console.log(
+        `updateOwnerAgentsIndex: removing agent ${agentId}, new list = ${JSON.stringify(
+          updatedIds
+        )}`
+      );
       if (updatedIds.length === 0) {
         await kv.delete(indexKey);
+        console.log(
+          `updateOwnerAgentsIndex: deleted empty index for owner ${ownerId}`
+        );
       } else {
         await kv.put(indexKey, JSON.stringify(updatedIds));
+        console.log(
+          `updateOwnerAgentsIndex: updated index for owner ${ownerId}`
+        );
       }
     }
   } catch (error) {

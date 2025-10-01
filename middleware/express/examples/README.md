@@ -101,7 +101,7 @@ app.post("/api/repo/pr",
 ```bash
 curl -X POST 'http://localhost:3000/api/refunds' \
   -H 'Content-Type: application/json' \
-  -H 'X-Agent-Passport-Id: aeebc92d-13fb-4e23-8c3c-1aa82b167da645678' \
+  -H 'X-Agent-Passport-Id: ap_128094d345678' \
   -d '{
     "amount": 25.00,
     "currency": "USD",
@@ -129,7 +129,7 @@ curl -X POST 'http://localhost:3000/api/data/export' \
 ```bash
 curl -X POST 'http://localhost:3000/api/messages/send' \
   -H 'Content-Type: application/json' \
-  -H 'X-Agent-Passport-Id: aeebc92d-13fb-4e23-8c3c-1aa82b167da645678' \
+  -H 'X-Agent-Passport-Id: ap_128094d345678' \
   -d '{
     "channel": "general",
     "message_count": 5,

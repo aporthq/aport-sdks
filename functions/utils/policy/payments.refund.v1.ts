@@ -27,7 +27,7 @@ export async function evaluateRefundsV1(
       allow: false,
       reasons: [
         {
-          code: "AGENT_SUSPENDED",
+          code: "oap.passport_suspended",
           message: `Agent is ${passport.status} and cannot perform operations`,
           severity: "error",
         },
@@ -55,7 +55,7 @@ export async function evaluateRefundsV1(
       allow: false,
       reasons: [
         {
-          code: "MISSING_REQUIRED_FIELDS",
+          code: "oap.invalid_context",
           message: `Missing required fields: ${missingFields.join(", ")}`,
           severity: "error",
         },
@@ -77,7 +77,7 @@ export async function evaluateRefundsV1(
   if (!hasRefundCapability) {
     allow = false;
     reasons.push({
-      code: "INSUFFICIENT_CAPABILITIES",
+      code: "oap.unknown_capability",
       message: "Missing required capability: payments.refund",
       severity: "error",
     });
@@ -88,7 +88,7 @@ export async function evaluateRefundsV1(
   if (!supportedCurrencies.includes(currency)) {
     allow = false;
     reasons.push({
-      code: "UNSUPPORTED_CURRENCY",
+      code: "oap.currency_unsupported",
       message: `Currency ${currency} is not supported`,
       severity: "error",
     });
@@ -99,7 +99,7 @@ export async function evaluateRefundsV1(
   if (currencyLimits && amount_minor > currencyLimits.max_per_tx) {
     allow = false;
     reasons.push({
-      code: "AMOUNT_LIMIT_EXCEEDED",
+      code: "oap.limit_exceeded",
       message: `Amount ${amount_minor} exceeds limit of ${currencyLimits.max_per_tx} for currency ${currency}`,
       severity: "error",
     });
@@ -110,7 +110,7 @@ export async function evaluateRefundsV1(
   if (!allowedRegions.includes(region)) {
     allow = false;
     reasons.push({
-      code: "REGION_NOT_ALLOWED",
+      code: "oap.region_blocked",
       message: `Region ${region} is not allowed`,
       severity: "error",
     });
@@ -121,7 +121,7 @@ export async function evaluateRefundsV1(
   if (!validReasonCodes.includes(reason_code)) {
     allow = false;
     reasons.push({
-      code: "INVALID_REASON_CODE",
+      code: "oap.invalid_reason_code",
       message: `Reason code ${reason_code} is not valid`,
       severity: "error",
     });
@@ -134,7 +134,7 @@ export async function evaluateRefundsV1(
   if (!meetsAssuranceRequirement(agentAssurance, requiredAssurance)) {
     allow = false;
     reasons.push({
-      code: "INSUFFICIENT_ASSURANCE",
+      code: "oap.assurance_insufficient",
       message: `Required assurance level ${requiredAssurance} not met (current: ${agentAssurance})`,
       severity: "error",
     });
@@ -144,7 +144,7 @@ export async function evaluateRefundsV1(
   if (context.order_currency && currency !== context.order_currency) {
     allow = false;
     reasons.push({
-      code: "CROSS_CURRENCY_DENIED",
+      code: "oap.cross_currency_denied",
       message: "Cross-currency transactions are not allowed",
       severity: "error",
     });
@@ -170,7 +170,7 @@ export async function evaluateRefundsV1(
     if (amount_minor > remainingBalance) {
       allow = false;
       reasons.push({
-        code: "INSUFFICIENT_ORDER_BALANCE",
+        code: "oap.limit_exceeded",
         message: `Refund amount ${amount_minor} exceeds remaining order balance ${remainingBalance}`,
         severity: "error",
       });
@@ -240,7 +240,7 @@ async function checkDailyRefundLimit(
 
     if (!(result as any).allowed) {
       reasons.push({
-        code: "DAILY_REFUND_LIMIT_EXCEEDED",
+        code: "oap.limit_exceeded",
         message: `Daily refund limit for ${currency} exceeded: ${
           (result as any).currentCount
         }/${(result as any).dailyLimit}`,
@@ -270,7 +270,7 @@ async function checkRegionRestrictions(
 
     if (!allowedRegions.includes(contextRegion)) {
       reasons.push({
-        code: "REGION_NOT_ALLOWED",
+        code: "oap.region_blocked",
         message: `Agent not allowed in region ${contextRegion}`,
         severity: "error",
       });
@@ -294,7 +294,7 @@ async function checkIdempotency(
 
   if (existing) {
     reasons.push({
-      code: "IDEMPOTENCY_KEY_USED",
+      code: "oap.idempotency_conflict",
       message: "Idempotency key has already been used",
       severity: "error",
     });

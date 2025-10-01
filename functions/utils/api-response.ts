@@ -273,30 +273,35 @@ export class ValidationUtils {
 
   /**
    * Validate admin-only fields access
+   * Returns skipped fields instead of failing for non-admin users
    */
   static validateAdminFields(
     body: Record<string, any>,
     isAdmin: boolean
-  ): { valid: boolean; error?: string; restrictedFields?: string[] } {
+  ): {
+    valid: boolean;
+    error?: string;
+    restrictedFields?: string[];
+    skippedFields?: string[];
+  } {
     const restrictedFields: string[] = [];
+    const skippedFields: string[] = [];
 
     for (const field of this.ADMIN_ONLY_FIELDS) {
       if (body[field] !== undefined && !isAdmin) {
         restrictedFields.push(field);
+        skippedFields.push(field);
+        // Remove the field from the body to prevent it from being processed
+        delete body[field];
       }
     }
 
-    if (restrictedFields.length > 0) {
-      return {
-        valid: false,
-        error: `Admin privileges required to modify fields: ${restrictedFields.join(
-          ", "
-        )}`,
-        restrictedFields,
-      };
-    }
-
-    return { valid: true };
+    // Always return valid, but include information about skipped fields
+    return {
+      valid: true,
+      restrictedFields,
+      skippedFields: skippedFields.length > 0 ? skippedFields : undefined,
+    };
   }
 
   /**
