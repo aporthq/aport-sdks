@@ -210,13 +210,13 @@ export function extractAgentIDFromRequest(
  * @example
  * ```typescript
  * // Explicit agent ID (preferred)
- * const validatedId = validateAgentID('aeebc92d-13fb-4e23-8c3c-1aa82b167da645678');
+ * const validatedId = validateAgentID('ap_128094d345678');
  *
  * // Header fallback
  * const validatedId = validateAgentID(undefined, req);
  *
  * // Both (function parameter takes precedence)
- * const validatedId = validateAgentID('aeebc92d-13fb-4e23-8c3c-1aa82b167da645678', req);
+ * const validatedId = validateAgentID('ap_128094d345678', req);
  * ```
  */
 export function validateAgentID(
@@ -303,7 +303,7 @@ export function validatePolicy(
  * @example
  * ```typescript
  * const { agentId, policyId } = validatePolicyCall(
- *   'aeebc92d-13fb-4e23-8c3c-1aa82b167da645678',  // Optional explicit agent ID
+ *   'ap_128094d345678',  // Optional explicit agent ID
  *   'payments.refund.v1',        // Required policy ID
  *   req                   // Request for header fallback
  * );
@@ -335,7 +335,7 @@ export function validatePolicyCall(
  *
  * @example
  * ```typescript
- * if (isValidAgentIDFormat('aeebc92d-13fb-4e23-8c3c-1aa82b167da645678')) {
+ * if (isValidAgentIDFormat('ap_128094d345678')) {
  *   // Safe to use as agent ID
  * }
  * ```

@@ -26,7 +26,7 @@ app.use(express.json());
  */
 
 // Create middleware with explicit agent ID
-const AGENT_ID = "agents/aeebc92d-13fb-4e23-8c3c-1aa82b167da6"; // Your existing agent ID
+const AGENT_ID = "agents/ap_128094d3"; // Your existing agent ID
 const refundsMiddleware1 = createAgentPassportMiddleware(AGENT_ID, {
   apiBaseUrl: process.env.APORT_API_BASE_URL || "https://api.aport.io",
   failClosed: true,
@@ -160,9 +160,9 @@ app.get("/health", (req, res) => {
  */
 
 // Different agents for different purposes
-const REFUNDS_AGENT_ID = "agents/aeebc92d-13fb-4e23-8c3c-1aa82b167da6";
-const DATA_AGENT_ID = "agents/aeebc92d-13fb-4e23-8c3c-1aa82b167da6";
-const REPO_AGENT_ID = "agents/aeebc92d-13fb-4e23-8c3c-1aa82b167da6";
+const REFUNDS_AGENT_ID = "agents/ap_128094d3";
+const DATA_AGENT_ID = "agents/ap_128094d3";
+const REPO_AGENT_ID = "agents/ap_128094d3";
 
 // Create separate middleware for each agent
 const refundsMiddleware2 = createAgentPassportMiddleware(REFUNDS_AGENT_ID);
@@ -214,15 +214,12 @@ function getAgentIdForRequest(req) {
   const userType = req.headers["x-user-type"];
 
   // Return appropriate agent ID based on context
-  if (tenantId === "tenant_1")
-    return "agents/aeebc92d-13fb-4e23-8c3c-1aa82b167da6";
-  if (tenantId === "tenant_2")
-    return "agents/aeebc92d-13fb-4e23-8c3c-1aa82b167da6";
-  if (userType === "admin")
-    return "agents/aeebc92d-13fb-4e23-8c3c-1aa82b167da6";
+  if (tenantId === "tenant_1") return "agents/ap_128094d3";
+  if (tenantId === "tenant_2") return "agents/ap_128094d3";
+  if (userType === "admin") return "agents/ap_128094d3";
 
   // Default agent ID
-  return "agents/aeebc92d-13fb-4e23-8c3c-1aa82b167da6";
+  return "agents/ap_128094d3";
 }
 
 app.post(

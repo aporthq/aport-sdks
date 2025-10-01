@@ -60,7 +60,7 @@ import {
  *         agent_id:
  *           type: string
  *           description: Unique identifier for the AI agent
- *           example: "aeebc92d-13fb-4e23-8c3c-1aa82b167da6"
+ *           example: "ap_128094d3"
  *         owner:
  *           type: string
  *           description: Organization or individual who owns the agent
@@ -118,11 +118,11 @@ import {
  *         agent_id:
  *           type: string
  *           description: Created agent ID
- *           example: "aeebc92d-13fb-4e23-8c3c-1aa82b167da6"
+ *           example: "ap_128094d3"
  *         key:
  *           type: string
  *           description: Storage key for the passport
- *           example: "passport:aeebc92d-13fb-4e23-8c3c-1aa82b167da6"
+ *           example: "passport:ap_128094d3"
  *     ValidationError:
  *       type: object
  *       required:
@@ -231,7 +231,7 @@ interface CreatePassportRequest {
  *           schema:
  *             $ref: '#/components/schemas/AdminPassport'
  *           example:
- *             agent_id: "aeebc92d-13fb-4e23-8c3c-1aa82b167da6"
+ *             agent_id: "ap_128094d3"
  *             owner: "Acme Corp"
  *             role: "Tier-1"
  *             permissions: ["read:tickets", "create:tickets"]
@@ -250,8 +250,8 @@ interface CreatePassportRequest {
  *             example:
  *               ok: true
  *               message: "Agent passport created successfully"
- *               agent_id: "aeebc92d-13fb-4e23-8c3c-1aa82b167da6"
- *               key: "passport:aeebc92d-13fb-4e23-8c3c-1aa82b167da6"
+ *               agent_id: "ap_128094d3"
+ *               key: "passport:ap_128094d3"
  *       400:
  *         description: Invalid request data
  *         content:
@@ -292,7 +292,7 @@ interface CreatePassportRequest {
  *                   example: "passport_already_exists"
  *                 agent_id:
  *                   type: string
- *                   example: "aeebc92d-13fb-4e23-8c3c-1aa82b167da6"
+ *                   example: "ap_128094d3"
  *       500:
  *         description: Internal server error
  *         content:

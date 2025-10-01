@@ -5,7 +5,11 @@
  * tenant-specific Durable Objects from handlers and other services.
  */
 
-import { DurableObjectNamespace } from "@cloudflare/workers-types";
+import {
+  DurableObjectNamespace,
+  KVNamespace,
+  R2Bucket,
+} from "@cloudflare/workers-types";
 import {
   CreatePassportMessage,
   UpdatePassportMessage,
@@ -18,6 +22,7 @@ import {
   RefundConsumeResponse,
 } from "./TenantDO";
 import { TenantRow } from "../adapters/ports";
+import { createPassportStorageService } from "../utils/passport-storage-service";
 export { TenantDO } from "./TenantDO";
 
 // ============================================================================
@@ -28,19 +33,47 @@ export class TenantDOClient {
   private readonly baseUrl: string;
   private readonly timeout: number;
   private readonly maxRetries: number;
+  private storageService?: any;
 
   constructor(
     private tenantNamespace: DurableObjectNamespace | null,
     private tenantId: string,
-    options: {
+    private options: {
       baseUrl?: string;
       timeout?: number;
       maxRetries?: number;
+      // Storage fallback options
+      kv?: KVNamespace;
+      r2?: R2Bucket;
+      region?: string;
+      version?: string;
     } = {}
   ) {
     this.baseUrl = options.baseUrl || "http://tenant";
     this.timeout = options.timeout || 10000; // 10s default
     this.maxRetries = options.maxRetries || 3;
+
+    // Initialize storage service for fallback operations
+    if (options.kv) {
+      console.log(
+        "TenantDOClient: Creating storage service with KV:",
+        options.kv
+      );
+      this.storageService = createPassportStorageService(options.kv, {
+        r2: options.r2,
+        region: options.region,
+        version: options.version,
+        tenantId: this.tenantId,
+      });
+      console.log(
+        "TenantDOClient: Storage service created:",
+        !!this.storageService
+      );
+    } else {
+      console.log(
+        "TenantDOClient: No KV provided, storage service not created"
+      );
+    }
   }
 
   private async sendMessage<T = any>(message: any): Promise<TenantResponse> {
@@ -50,13 +83,26 @@ export class TenantDOClient {
         "TenantDO namespace not available, using stub implementation"
       );
 
-      // For CREATE_PASSPORT messages, return the passport data as-is
+      // For CREATE_PASSPORT messages, return null to trigger storage fallback
       if (message.type === "CREATE_PASSPORT") {
         return {
           success: true,
           message:
             "Stub implementation - passport created without DO operations",
-          data: message.payload,
+          data: null, // Return null to trigger storage fallback
+          requestId: this.generateRequestId(),
+        };
+      }
+
+      // For UPDATE_PASSPORT and STATUS_CHANGE messages, return null to trigger storage fallback
+      if (
+        message.type === "UPDATE_PASSPORT" ||
+        message.type === "STATUS_CHANGE"
+      ) {
+        return {
+          success: true,
+          message: "Stub implementation - no actual DO operations performed",
+          data: null, // Return null to trigger storage fallback
           requestId: this.generateRequestId(),
         };
       }
@@ -159,9 +205,29 @@ export class TenantDOClient {
       requestId: this.generateRequestId(),
     };
 
+    console.log("TenantDOClient.createPassport - attempting TenantDO call");
+    console.log("TenantDOClient options:", this.options);
+    console.log("Passport being created:", passport.agent_id);
+
     const response = await this.sendMessage(message);
     if (!response.success) {
       throw new Error(response.error || "Failed to create passport");
+    }
+
+    // If TenantDO is disabled or failed, handle storage fallback
+    console.log("TenantDOClient.createPassport debug:", {
+      responseData: response.data,
+      hasKV: !!this.options.kv,
+      hasStorageService: !!this.storageService,
+      tenantId: this.tenantId,
+      tenantNamespace: !!this.tenantNamespace,
+    });
+
+    if (response.data === null && this.options.kv) {
+      console.log(
+        "TenantDO unavailable, using storage fallback for createPassport"
+      );
+      return await this.createPassportFallback(passport);
     }
 
     return response.data;
@@ -178,6 +244,14 @@ export class TenantDOClient {
     const response = await this.sendMessage(message);
     if (!response.success) {
       throw new Error(response.error || "Failed to update passport");
+    }
+
+    // If TenantDO is disabled or failed, handle storage fallback
+    if (response.data === null && this.options.kv) {
+      console.log(
+        "TenantDO unavailable, using storage fallback for updatePassport"
+      );
+      return await this.updatePassportFallback(passport);
     }
 
     return response.data;
@@ -201,6 +275,14 @@ export class TenantDOClient {
     const response = await this.sendMessage(message);
     if (!response.success) {
       throw new Error(response.error || "Failed to change status");
+    }
+
+    // If TenantDO is disabled or failed, handle storage fallback
+    if (response.data === null && this.options.kv) {
+      console.log(
+        "TenantDO unavailable, using storage fallback for changeStatus"
+      );
+      return await this.changeStatusFallback(agentId, status, reason);
     }
 
     return response.data;
@@ -331,6 +413,133 @@ export class TenantDOClient {
   }
 
   // ============================================================================
+  // Storage Fallback Methods (when TenantDO is disabled or fails)
+  // ============================================================================
+
+  /**
+   * Fallback storage method for createPassport when TenantDO is unavailable
+   */
+  private async createPassportFallback(passport: any): Promise<any> {
+    console.log("createPassportFallback called for:", passport.agent_id);
+    console.log("Storage service KV namespace:", this.storageService?.kv);
+    console.log("Options KV namespace:", this.options.kv);
+
+    if (!this.storageService) {
+      throw new Error("No storage service available for fallback");
+    }
+
+    try {
+      console.log("Calling storageService.createPassport...");
+      const result = await this.storageService.createPassport(passport, {
+        createBackup: true,
+        invalidateCache: true,
+        preWarmCache: true,
+        reason: "Passport created via TenantDO fallback",
+        actor: "tenantdo-fallback",
+      });
+
+      console.log("Storage service result:", result);
+
+      if (!result.success) {
+        throw new Error(result.error || "Storage fallback failed");
+      }
+
+      console.log(`Passport ${passport.agent_id} created via storage fallback`);
+      return passport;
+    } catch (error) {
+      console.error("Storage fallback failed:", error);
+      throw new Error(
+        `Failed to create passport via fallback: ${(error as Error).message}`
+      );
+    }
+  }
+
+  /**
+   * Fallback storage method for updatePassport when TenantDO is unavailable
+   */
+  private async updatePassportFallback(passport: any): Promise<any> {
+    if (!this.storageService) {
+      throw new Error("No storage service available for fallback");
+    }
+
+    try {
+      // Get current passport for comparison
+      const currentPassport = (await this.options.kv?.get(
+        `passport:${passport.agent_id}`,
+        "json"
+      )) as any;
+
+      const result = await this.storageService.updatePassport(
+        passport,
+        currentPassport,
+        {
+          createBackup: true,
+          invalidateCache: true,
+          preWarmCache: true,
+          reason: "Passport updated via TenantDO fallback",
+          actor: "tenantdo-fallback",
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(result.error || "Storage fallback failed");
+      }
+
+      console.log(`Passport ${passport.agent_id} updated via storage fallback`);
+      return passport;
+    } catch (error) {
+      console.error("Storage fallback failed:", error);
+      throw new Error(
+        `Failed to update passport via fallback: ${(error as Error).message}`
+      );
+    }
+  }
+
+  /**
+   * Fallback storage method for changeStatus when TenantDO is unavailable
+   */
+  private async changeStatusFallback(
+    agentId: string,
+    status: "draft" | "active" | "suspended" | "revoked",
+    reason?: string
+  ): Promise<{ success: boolean }> {
+    if (!this.storageService) {
+      throw new Error("No storage service available for fallback");
+    }
+
+    try {
+      const result = await this.storageService.changeStatus(
+        agentId,
+        status,
+        reason,
+        {
+          createBackup: true,
+          invalidateCache: true,
+          preWarmCache: true,
+          reason: `Status changed to ${status} via TenantDO fallback`,
+          actor: "tenantdo-fallback",
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(result.error || "Storage fallback failed");
+      }
+
+      console.log(
+        `Passport ${agentId} status changed to ${status} via storage fallback`
+      );
+      return { success: true };
+    } catch (error) {
+      console.error("Storage fallback failed:", error);
+      throw new Error(
+        `Failed to change status via fallback: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
+    }
+  }
+
+  // ============================================================================
   // Utility Methods
   // ============================================================================
 
@@ -368,17 +577,38 @@ export function createTenantDOClientFromEnv(
     baseUrl?: string;
     timeout?: number;
     maxRetries?: number;
+    // Storage fallback options
+    kv?: KVNamespace;
+    r2?: R2Bucket;
+    region?: string;
+    version?: string;
   }
 ): TenantDOClient {
   if (!env.TENANT_DO) {
     console.warn(
-      "TENANT_DO namespace not found in environment - using stub implementation"
+      "TENANT_DO namespace not found in environment - using stub implementation with storage fallback"
     );
-    return new TenantDOClient(null, tenantId, options);
+    return new TenantDOClient(null, tenantId, {
+      ...options,
+      kv: options?.kv || env.ai_passport_registry,
+      r2: options?.r2 || env.PASSPORT_SNAPSHOTS_BUCKET,
+      region: options?.region || env.DEFAULT_REGION || "US",
+      version: options?.version || env.AP_VERSION || "1.0.0",
+    });
   }
 
-  return new TenantDOClient(env.TENANT_DO, tenantId, options);
+  return new TenantDOClient(env.TENANT_DO, tenantId, {
+    ...options,
+    kv: options?.kv || env.ai_passport_registry,
+    r2: options?.r2 || env.PASSPORT_SNAPSHOTS_BUCKET,
+    region: options?.region || env.DEFAULT_REGION || "US",
+    version: options?.version || env.AP_VERSION || "1.0.0",
+  });
 }
+
+// ============================================================================
+// Storage Fallback Methods (when TenantDO is disabled or fails)
+// ============================================================================
 
 // ============================================================================
 // Convenience Functions for Common Operations

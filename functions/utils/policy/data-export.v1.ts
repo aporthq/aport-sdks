@@ -26,7 +26,7 @@ export async function evaluateDataExportV1(
       allow: false,
       reasons: [
         {
-          code: "AGENT_SUSPENDED",
+          code: "oap.passport_suspended",
           message: `Agent is ${passport.status} and cannot perform operations`,
           severity: "error",
         },
@@ -45,29 +45,35 @@ export async function evaluateDataExportV1(
   if (!hasExportCapability) {
     allow = false;
     reasons.push({
-      code: "INSUFFICIENT_CAPABILITIES",
+      code: "oap.unknown_capability",
       message: "Missing required capability: data.export",
       severity: "error",
     });
   }
 
   // 2. Check row limits
-  const maxRows = passport.limits?.max_export_rows || 1000;
+  const maxRows =
+    passport.limits?.data?.export?.max_export_rows ??
+    passport.limits?.max_export_rows ??
+    1000;
   if (context.rows && context.rows > maxRows) {
     allow = false;
     reasons.push({
-      code: "ROW_LIMIT_EXCEEDED",
+      code: "oap.limit_exceeded",
       message: `Row count ${context.rows} exceeds limit of ${maxRows}`,
       severity: "error",
     });
   }
 
   // 3. Check PII handling
-  const allowPII = passport.limits?.allow_pii || false;
+  const allowPII =
+    passport.limits?.data?.export?.allow_pii ??
+    passport.limits?.allow_pii ??
+    false;
   if (context.include_pii && !allowPII) {
     allow = false;
     reasons.push({
-      code: "PII_NOT_ALLOWED",
+      code: "oap.pii_not_allowed",
       message: "PII export is not allowed for this agent",
       severity: "error",
     });
@@ -81,7 +87,7 @@ export async function evaluateDataExportV1(
   if (context.format && !allowedFormats.includes(context.format)) {
     allow = false;
     reasons.push({
-      code: "INVALID_FORMAT",
+      code: "oap.format_unsupported",
       message: `Format ${
         context.format
       } is not allowed. Allowed formats: ${allowedFormats.join(", ")}`,
@@ -94,7 +100,7 @@ export async function evaluateDataExportV1(
   if (!meetsMinimumAssurance(agentAssurance, "L1")) {
     allow = false;
     reasons.push({
-      code: "INSUFFICIENT_ASSURANCE",
+      code: "oap.assurance_insufficient",
       message: `Required assurance level L1 not met (current: ${agentAssurance})`,
       severity: "error",
     });

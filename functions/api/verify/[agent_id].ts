@@ -1,179 +1,3 @@
-/**
- * @swagger
- * /api/verify/{agent_id}:
- *   get:
- *     summary: Verify agent passport
- *     description: Hot path verification with KV-only reads, multi-region/multi-tenant support, and comprehensive performance monitoring. Returns passport data with caching and high availability.
- *     operationId: verifyAgentPassport
- *     tags:
- *       - Verification
- *       - Passports
- *     parameters:
- *       - name: agent_id
- *         in: path
- *         required: true
- *         description: The unique identifier of the agent passport to verify
- *         schema:
- *           type: string
- *           pattern: "^ap_[a-zA-Z0-9]+$"
- *           example: "aeebc92d-13fb-4e23-8c3c-1aa82b167da6"
- *       - name: include_attestation
- *         in: query
- *         description: Include verifiable attestation data
- *         schema:
- *           type: boolean
- *           default: false
- *       - name: include_audit_trail
- *         in: query
- *         description: Include audit trail information
- *         schema:
- *           type: boolean
- *           default: false
- *       - name: cache_control
- *         in: query
- *         description: Cache control preference
- *         schema:
- *           type: string
- *           enum: ["no-cache", "max-age", "stale-while-revalidate"]
- *           default: "max-age"
- *     responses:
- *       200:
- *         description: Passport verification successful
- *         headers:
- *           Server-Timing:
- *             description: Performance timing information
- *             schema:
- *               type: string
- *               example: "kv-read;dur=45, cache-hit;dur=2, total;dur=47"
- *           ETag:
- *             description: Entity tag for caching
- *             schema:
- *               type: string
- *               example: 'W/"aeebc92d-13fb-4e23-8c3c-1aa82b167da6_2025-01-16T10:30:00Z_v1.0"'
- *           Cache-Control:
- *             description: Cache control directives
- *             schema:
- *               type: string
- *               example: "public, max-age=300, stale-while-revalidate=60"
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               required:
- *                 - success
- *                 - data
- *                 - requestId
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   $ref: '#/components/schemas/Passport'
- *                 requestId:
- *                   type: string
- *                   description: Unique request identifier
- *                   example: "verify_123456789_abc123"
- *                 performance:
- *                   type: object
- *                   description: Performance metrics
- *                   properties:
- *                     total_time_ms:
- *                       type: number
- *                       example: 47
- *                     cache_hit:
- *                       type: boolean
- *                       example: true
- *                     cache_level:
- *                       type: string
- *                       example: "L1"
- *                     kv_read_time_ms:
- *                       type: number
- *                       example: 45
- *                 attestation:
- *                   type: object
- *                   description: Verifiable attestation data (if requested)
- *                   properties:
- *                     hash:
- *                       type: string
- *                       example: "sha256:abc123def456"
- *                     signature:
- *                       type: string
- *                       example: "ed25519:xyz789"
- *                     timestamp:
- *                       type: string
- *                       format: date-time
- *                       example: "2025-01-16T10:30:00Z"
- *                 audit_trail:
- *                   type: array
- *                   description: Audit trail entries (if requested)
- *                   items:
- *                     type: object
- *                     properties:
- *                       action:
- *                         type: string
- *                         example: "passport_verified"
- *                       timestamp:
- *                         type: string
- *                         format: date-time
- *                         example: "2025-01-16T10:30:00Z"
- *                       details:
- *                         type: object
- *                         additionalProperties: true
- *       304:
- *         description: Not modified - passport unchanged
- *         headers:
- *           ETag:
- *             description: Entity tag for caching
- *             schema:
- *               type: string
- *               example: 'W/"aeebc92d-13fb-4e23-8c3c-1aa82b167da6_2025-01-16T10:30:00Z_v1.0"'
- *       400:
- *         description: Bad request - invalid agent ID
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *             example:
- *               error: "invalid_agent_id"
- *               message: "Agent ID must match pattern ap_[a-zA-Z0-9]+"
- *       404:
- *         description: Passport not found
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *             example:
- *               error: "passport_not_found"
- *               message: "Passport with ID aeebc92d-13fb-4e23-8c3c-1aa82b167da6 not found"
- *       429:
- *         description: Too many requests - rate limit exceeded
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *             example:
- *               error: "rate_limit_exceeded"
- *               message: "Too many requests, please try again later"
- *       500:
- *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *             example:
- *               error: "internal_server_error"
- *               message: "An unexpected error occurred"
- *       503:
- *         description: Service unavailable - high availability fallback failed
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *             example:
- *               error: "service_unavailable"
- *               message: "All verification services are temporarily unavailable"
- */
-
 import { cors } from "../../utils/cors";
 import { createVerifyRateLimiter, RateLimiter } from "../../utils/rate-limit";
 import { createLogger } from "../../utils/logger";
@@ -191,11 +15,65 @@ import {
   PagesFunction,
 } from "@cloudflare/workers-types";
 import { PassportData } from "../../../types/passport";
-import {
-  resolveTenantFromOrgId,
-  resolveTenantBindings,
-} from "../../runtime/region";
-import { KVResolver, getKVForOwner } from "../../utils/kv-resolver";
+
+/**
+ * Optimized fallback function to try direct KV lookup (no verbose logging)
+ */
+async function tryDirectKVLookupOptimized(
+  kv: KVNamespace,
+  agentId: string,
+  version: string
+): Promise<any> {
+  const startTime = Date.now();
+
+  try {
+    // Try direct passport key first
+    const passportKey = `passport:${agentId}`;
+    const passportData = await kv.get(passportKey, "json");
+
+    if (passportData && typeof passportData === "object") {
+      const { buildPassportObject } = await import("../../utils/serialization");
+      const passport = buildPassportObject(
+        passportData as PassportData,
+        version
+      );
+      const etag = generateETag(passport);
+
+      return {
+        passport,
+        etag,
+        source: "kv-direct",
+        latency: Date.now() - startTime,
+        fromCache: false,
+      };
+    }
+
+    // Try serialized passport key
+    const serializedKey = `passport_serialized:${agentId}`;
+    const serializedData = await kv.get(serializedKey, "json");
+
+    if (
+      serializedData &&
+      typeof serializedData === "object" &&
+      "json" in serializedData
+    ) {
+      const data = serializedData as { json: any; etag: string };
+      return {
+        passport: data.json,
+        etag: data.etag,
+        source: "kv-serialized",
+        latency: Date.now() - startTime,
+        fromCache: false,
+      };
+    }
+
+    return null;
+  } catch (error) {
+    // Only log errors, not normal "not found" cases
+    console.error("Fallback KV lookup failed:", error);
+    return null;
+  }
+}
 
 /**
  * Generate ETag for passport
@@ -217,961 +95,884 @@ function generateETag(passport: any): string {
 }
 
 /**
- * R2 snapshot fallback for high availability with timeout and retry
+ * @swagger
+ * components:
+ *   schemas:
+ *     Passport:
+ *       type: object
+ *       required:
+ *         - agent_id
+ *         - owner_id
+ *         - owner_type
+ *         - owner_display
+ *         - role
+ *         - capabilities
+ *         - limits
+ *         - regions
+ *         - status
+ *         - contact
+ *         - updated_at
+ *         - version
+ *       properties:
+ *         agent_id:
+ *           type: string
+ *           description: Unique identifier for the AI agent
+ *           example: "ap_128094d3"
+ *         slug:
+ *           type: string
+ *           description: URL-friendly identifier for the agent
+ *           example: "acme-support-bot"
+ *         name:
+ *           type: string
+ *           description: Human-readable name of the agent
+ *           example: "Acme Support Bot"
+ *         owner_id:
+ *           type: string
+ *           description: Unique identifier of the owner (user or organization)
+ *           example: "ap_user_456"
+ *         owner_type:
+ *           type: string
+ *           enum: ["user", "org"]
+ *           description: Type of the owner entity
+ *           example: "org"
+ *         owner_display:
+ *           type: string
+ *           description: Display name of the owner
+ *           example: "Acme Corp"
+ *         controller_type:
+ *           type: string
+ *           description: Type of controller managing the agent
+ *           example: "api"
+ *         claimed:
+ *           type: boolean
+ *           description: Whether the agent has been claimed by its owner
+ *           example: true
+ *         role:
+ *           type: string
+ *           description: Functional role or tier of the agent
+ *           example: "agent"
+ *         description:
+ *           type: string
+ *           description: Detailed description of the agent's purpose
+ *           example: "Customer support automation agent"
+ *         capabilities:
+ *           type: array
+ *           items:
+ *             type: object
+ *             properties:
+ *               id:
+ *                 type: string
+ *                 description: Capability identifier
+ *                 enum: ["payments.refund", "data.export", "messaging.send", "repo.pr.create", "repo.merge"]
+ *                 example: "payments.refund"
+ *               params:
+ *                 type: object
+ *                 additionalProperties: true
+ *                 description: Optional parameters for the capability
+ *           description: Array of capabilities granted to the agent
+ *           example: [{"id": "payments.refund"}, {"id": "data.export", "params": {"max_rows": 1000}}, {"id": "messaging.send", "params": {"channels_allowlist": ["slack", "email"]}}]
+ *         limits:
+ *           type: object
+ *           properties:
+ *             refund_amount_max_per_tx:
+ *               type: number
+ *               description: Maximum refund amount per transaction in USD cents
+ *               example: 10000
+ *             refund_amount_daily_cap:
+ *               type: number
+ *               description: Maximum total refunds per day in USD cents
+ *               example: 100000
+ *             payout_usd_daily_cap:
+ *               type: number
+ *               description: Maximum total payouts per day in USD cents
+ *               example: 1000000
+ *             max_actions_per_min:
+ *               type: number
+ *               description: Maximum actions per minute
+ *               example: 60
+ *             max_export_rows:
+ *               type: number
+ *               description: Maximum rows in data exports
+ *               example: 10000
+ *             allow_pii:
+ *               type: boolean
+ *               description: Whether PII access is allowed
+ *               example: false
+ *             max_deploys_per_day:
+ *               type: number
+ *               description: Maximum deployments per day
+ *               example: 5
+ *             msgs_per_min:
+ *               type: number
+ *               description: Maximum messages per minute for messaging capability
+ *               example: 30
+ *             msgs_per_day:
+ *               type: number
+ *               description: Maximum messages per day for messaging capability
+ *               example: 1000
+ *             max_prs_per_day:
+ *               type: number
+ *               description: Maximum pull requests per day for repository capability
+ *               example: 10
+ *             max_merges_per_day:
+ *               type: number
+ *               description: Maximum merges per day for repository capability
+ *               example: 5
+ *             max_pr_size_kb:
+ *               type: number
+ *               description: Maximum pull request size in KB for repository capability
+ *               example: 1024
+ *           description: Typed limits configuration for the agent
+ *           example: {"refund_amount_max_per_tx": 10000, "max_export_rows": 1000, "allow_pii": false, "msgs_per_day": 1000, "max_prs_per_day": 10}
+ *         regions:
+ *           type: array
+ *           items:
+ *             type: string
+ *           description: Geographic regions where the agent operates
+ *           example: ["global", "us-east"]
+ *         status:
+ *           type: string
+ *           enum: ["draft", "active", "suspended", "revoked"]
+ *           description: Current status of the agent passport
+ *           example: "active"
+ *         verification_status:
+ *           type: string
+ *           description: Verification status of the agent
+ *           example: "github_verified"
+ *         verification_method:
+ *           type: string
+ *           description: Method used for verification
+ *           example: "github_verified"
+ *         verification_evidence:
+ *           type: object
+ *           additionalProperties: true
+ *           description: Evidence supporting the verification
+ *           example: {"github_username": "acme", "verified_at": "2024-01-15T10:30:00Z"}
+ *         assurance_level:
+ *           type: string
+ *           enum: ["L0", "L1", "L2", "L3", "L4KYC", "L4FIN"]
+ *           description: Assurance level of the owner (snapshot from owner)
+ *           example: "L2"
+ *         assurance_method:
+ *           type: string
+ *           description: Method used for assurance verification
+ *           example: "github_verified"
+ *         assurance_verified_at:
+ *           type: string
+ *           format: date-time
+ *           description: When the assurance was verified
+ *           example: "2024-01-15T10:30:00Z"
+ *         contact:
+ *           type: string
+ *           description: Contact information for the agent
+ *           example: "admin@acme.com"
+ *         links:
+ *           type: object
+ *           properties:
+ *             homepage:
+ *               type: string
+ *               format: uri
+ *               description: Homepage URL
+ *             docs:
+ *               type: string
+ *               format: uri
+ *               description: Documentation URL
+ *             repo:
+ *               type: string
+ *               format: uri
+ *               description: Repository URL
+ *           description: Related links for the agent
+ *           example: {"homepage": "https://acme.com", "docs": "https://docs.acme.com"}
+ *         categories:
+ *           type: array
+ *           items:
+ *             type: string
+ *             enum: ["support", "commerce", "devops", "ops", "analytics", "marketing"]
+ *           description: Controlled categories for the agent
+ *           example: ["support", "commerce"]
+ *         framework:
+ *           type: array
+ *           items:
+ *             type: string
+ *             enum: ["n8n", "LangGraph", "CrewAI", "AutoGen", "OpenAI", "LlamaIndex", "Custom"]
+ *           description: Controlled frameworks used by the agent
+ *           example: ["n8n", "LangGraph"]
+ *         logo_url:
+ *           type: string
+ *           format: uri
+ *           description: URL to the agent's logo
+ *           example: "https://acme.com/logo.png"
+ *         source:
+ *           type: string
+ *           description: Source of the passport creation
+ *           example: "admin"
+ *         created_at:
+ *           type: string
+ *           format: date-time
+ *           description: When the passport was created
+ *           example: "2024-01-15T10:00:00Z"
+ *         updated_at:
+ *           type: string
+ *           format: date-time
+ *           description: When the passport was last updated
+ *           example: "2024-01-15T10:30:00Z"
+ *         version:
+ *           type: string
+ *           description: Version of the passport schema
+ *           example: "1.0.0"
+ *         model_info:
+ *           type: object
+ *           additionalProperties: true
+ *           description: Information about the AI model used
+ *           example: {"model": "gpt-4", "provider": "openai"}
+ *         registry_key_id:
+ *           type: string
+ *           description: Registry key used for signing
+ *           example: "reg-2025-01"
+ *         canonical_hash:
+ *           type: string
+ *           description: Hash of the canonical passport data
+ *           example: "sha256:abc123..."
+ *         registry_sig:
+ *           type: string
+ *           description: Digital signature of the passport
+ *           example: "ed25519:def456..."
+ *         verified_at:
+ *           type: string
+ *           format: date-time
+ *           description: When the passport was verified
+ *           example: "2024-01-15T10:30:00Z"
+ *         attestations:
+ *           type: array
+ *           items:
+ *             type: object
+ *             properties:
+ *               type:
+ *                 type: string
+ *                 enum: ["vc", "did", "ap2", "oidc", "custom"]
+ *                 description: Type of attestation
+ *               issuer:
+ *                 type: string
+ *                 description: Attestation issuer
+ *               reference:
+ *                 type: string
+ *                 description: Attestation reference
+ *               claims:
+ *                 type: object
+ *                 additionalProperties: true
+ *                 description: Attestation claims
+ *               signature:
+ *                 type: string
+ *                 description: Attestation signature
+ *               verified_at:
+ *                 type: string
+ *                 format: date-time
+ *                 description: When the attestation was verified
+ *           description: Array of attestations for the agent
+ *         integrations:
+ *           type: object
+ *           properties:
+ *             github:
+ *               type: object
+ *               properties:
+ *                 allowed_actors:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                   description: Allowed GitHub actors
+ *                 allowed_apps:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                   description: Allowed GitHub apps
+ *               description: GitHub integration settings
+ *           description: Integration settings for the agent
+ *         webhook_url:
+ *           type: string
+ *           format: uri
+ *           description: Webhook URL for the agent
+ *           example: "https://webhook.example.com/agent-123"
+ *         email:
+ *           type: string
+ *           format: email
+ *           description: Email address for the agent
+ *           example: "agent@example.com"
+ *     ErrorResponse:
+ *       type: object
+ *       required:
+ *         - error
+ *       properties:
+ *         error:
+ *           type: string
+ *           description: Error code or message
+ *           example: "not_found"
+ *         message:
+ *           type: string
+ *           description: Human-readable error message
+ *           example: "Agent passport not found"
  */
-async function tryR2SnapshotFallback(
-  r2Bucket: R2Bucket,
-  agentId: string,
-  version: string,
-  timeoutMs: number = 2000
-): Promise<any> {
-  const startTime = performance.now();
 
-  try {
-    // Create timeout promise
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error("R2 timeout")), timeoutMs);
-    });
-
-    // Try to get passport snapshot from R2 with timeout
-    const snapshotKey = `passports/${agentId}/latest.json`;
-    const snapshotPromise = r2Bucket.get(snapshotKey);
-
-    const snapshot = await Promise.race([snapshotPromise, timeoutPromise]);
-
-    if (!snapshot) {
-      return null;
-    }
-
-    // Validate snapshot data
-    const passportData = await snapshot.json();
-    if (!passportData || typeof passportData !== "object") {
-      console.warn("R2 snapshot contains invalid data", { agentId });
-      return null;
-    }
-
-    // Validate required fields
-    if (
-      !(passportData as any).agent_id ||
-      !(passportData as any).updated_at ||
-      !(passportData as any).version
-    ) {
-      console.warn("R2 snapshot missing required fields", { agentId });
-      return null;
-    }
-
-    const passport = buildPassportObject(passportData as PassportData, version);
-    const etag = generateETag(passport);
-
-    return {
-      passport,
-      etag,
-      source: "r2",
-      latency: performance.now() - startTime,
-      fromCache: false,
-    };
-  } catch (error) {
-    // Silent fail for performance
-    console.warn("R2 fallback failed", {
-      error: error instanceof Error ? error.message : String(error),
-      agentId,
-      timeout: timeoutMs,
-    });
-    return null;
-  }
-}
-
-/**
- * Create comprehensive error response
- */
-function createErrorResponse(
-  errorCode: string,
-  message: string,
-  status: number,
-  requestId: string,
-  corsHeaders: Record<string, string>,
-  additionalHeaders: Record<string, string> = {}
-): Response {
-  return new Response(
-    JSON.stringify({
-      error: errorCode,
-      message,
-      requestId,
-    }),
-    {
-      status,
-      headers: {
-        "Content-Type": "application/json",
-        ...corsHeaders,
-        ...additionalHeaders,
-      },
-    }
-  );
-}
-
-/**
- * Create comprehensive success response with analytics
- */
-function createSuccessResponse(
-  data: any,
-  etag: string,
-  source: string,
-  latency: number,
-  totalLatency: number,
-  corsHeaders: Record<string, string>,
-  additionalHeaders: Record<string, string> = {}
-): Response {
-  const region = "UNKNOWN"; // Could be extracted from request.cf?.colo
-  const registryKeyId = `cache-${source}`;
-  const aportCacheStatus = source === "l1" || source === "l2" ? "HIT" : "MISS";
-
-  // Build comprehensive Server-Timing header
-  const serverTimingParts = [
-    `cache;desc="${source.toUpperCase()}"`,
-    `worker;dur=${(totalLatency - latency).toFixed(1)}`,
-    `kv;dur=${source === "l3" || source === "r2" ? latency.toFixed(1) : "0"}`,
-    `serialize;dur=1.0`,
-    `region;desc="${region}"`,
-  ];
-
-  return new Response(JSON.stringify(data), {
-    status: 200,
-    headers: {
-      "Content-Type": "application/json",
-      "Cache-Control":
-        "public, max-age=0, s-maxage=60, stale-while-revalidate=30, stale-if-error=86400",
-      "Server-Timing": serverTimingParts.join(", "),
-      ETag: etag,
-      "X-Registry-Key-ID": registryKeyId,
-      "X-Cache-Source": source,
-      "X-Cache-Latency": latency.toString(),
-      "Aport-Cache": aportCacheStatus,
-      ...corsHeaders,
-      ...additionalHeaders,
-    },
-  });
-}
-
-/**
- * Fallback direct KV lookup when tiered cache fails
- */
-async function tryDirectKVLookup(
-  kv: KVNamespace,
-  agentId: string,
-  version: string
-): Promise<any> {
-  const startTime = performance.now();
-
-  try {
-    // Try direct passport key first
-    const passportKey = `passport:${agentId}`;
-    const passportData = await kv.get(passportKey, "json");
-
-    if (passportData && typeof passportData === "object") {
-      const passport = buildPassportObject(
-        passportData as PassportData,
-        version
-      );
-      const etag = generateETag(passport);
-
-      return {
-        passport,
-        etag,
-        source: "l3", // KV is L3 cache
-        latency: performance.now() - startTime,
-        fromCache: false,
-      };
-    }
-
-    // Try serialized passport key (same as old endpoint)
-    const serializedKey = `passport_serialized:${agentId}`;
-    const serializedData = await kv.get(serializedKey, "json");
-
-    if (
-      serializedData &&
-      typeof serializedData === "object" &&
-      "json" in serializedData
-    ) {
-      const data = serializedData as { json: any; etag: string };
-      return {
-        passport: data.json,
-        etag: data.etag,
-        source: "l3",
-        latency: performance.now() - startTime,
-        fromCache: false,
-      };
-    }
-
-    return null;
-  } catch (error) {
-    // Silent fail for performance
-    return null;
-  }
-}
-
-/**
- * Validate and sanitize agent ID
- */
-function validateAgentId(agentId: string): {
-  valid: boolean;
-  normalized?: string;
-  error?: string;
-} {
-  if (!agentId || typeof agentId !== "string") {
-    return { valid: false, error: "Agent ID must be a string" };
-  }
-
-  const trimmed = agentId.trim();
-  if (trimmed.length === 0) {
-    return { valid: false, error: "Agent ID cannot be empty" };
-  }
-
-  if (trimmed.length > 100) {
-    return { valid: false, error: "Agent ID too long (max 100 characters)" };
-  }
-
-  // No UUID validation needed - accept any valid string
-
-  return { valid: true, normalized: trimmed };
-}
-
-/**
- * Create KV resolver for multi-region/multi-tenant support with caching
- */
-const kvResolverCache = new Map<string, any>();
-
-function createKVResolver(env: any) {
-  // Cache KV resolver to avoid recreating every request
-  const cacheKey = "kv-resolver";
-  if (kvResolverCache.has(cacheKey)) {
-    return kvResolverCache.get(cacheKey);
-  }
-
-  const kvResolver = new KVResolver(env);
-  const resolver = {
-    getAgentInfo: async (agentId: string) => {
-      // First operation: kv.get('agent_info:' + agent_id, 'json')
-      // Use default KV for agent_info lookup (it's global)
-      const agentInfoKey = `agent_info:${agentId}`;
-      return await env.ai_passport_registry.get(agentInfoKey, "json");
-    },
-    getPassport: async (agentId: string, region?: string, ownerId?: string) => {
-      // Get the appropriate KV based on region or owner
-      let kv: KVNamespace;
-
-      if (region) {
-        kv = kvResolver.getKVForRegion(region);
-      } else if (ownerId) {
-        kv = await kvResolver.getKVForOwner(ownerId);
-      } else {
-        kv = env.ai_passport_registry; // fallback
-      }
-
-      // Try passport key first
-      const passportKey = `passport:${agentId}`;
-      const passportData = await kv.get(passportKey, "json");
-
-      if (passportData && typeof passportData === "object") {
-        return passportData;
-      }
-
-      // Try serialized passport key
-      const serializedKey = `passport_serialized:${agentId}`;
-      const serializedData = await kv.get(serializedKey, "json");
-
-      if (
-        serializedData &&
-        typeof serializedData === "object" &&
-        "json" in serializedData
-      ) {
-        return (serializedData as { json: any }).json;
-      }
-
-      return null;
-    },
-    getVerifyView: async (
-      agentId: string,
-      region?: string,
-      ownerId?: string
-    ) => {
-      // Get the appropriate KV based on region or owner
-      let kv: KVNamespace;
-
-      if (region) {
-        kv = kvResolver.getKVForRegion(region);
-      } else if (ownerId) {
-        kv = await kvResolver.getKVForOwner(ownerId);
-      } else {
-        kv = env.ai_passport_registry; // fallback
-      }
-
-      const verifyKey = `verify_view:${agentId}`;
-      return await kv.get(verifyKey, "json");
-    },
-  };
-
-  kvResolverCache.set(cacheKey, resolver);
-  return resolver;
-}
-
-/**
- * Tenant resolution cache to avoid repeated lookups
- */
-const tenantCache = new Map<
-  string,
-  { kv: KVNamespace; region: string; expires: number }
->();
-const TENANT_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-const MAX_CACHE_SIZE = 1000; // Prevent memory leaks
-
-/**
- * Clean up expired cache entries
- */
-function cleanupCache() {
-  const now = Date.now();
-  for (const [key, value] of tenantCache.entries()) {
-    if (value.expires < now) {
-      tenantCache.delete(key);
-    }
-  }
-
-  // If cache is too large, remove oldest entries
-  if (tenantCache.size > MAX_CACHE_SIZE) {
-    const entries = Array.from(tenantCache.entries());
-    entries.sort((a, b) => a[1].expires - b[1].expires);
-    const toRemove = entries.slice(0, Math.floor(MAX_CACHE_SIZE / 2));
-    toRemove.forEach(([key]) => tenantCache.delete(key));
-  }
-}
-
-async function getTenantKV(
-  env: any,
-  ownerId: string,
-  region: string
-): Promise<KVNamespace> {
-  // Clean up cache periodically
-  if (Math.random() < 0.1) {
-    // 10% chance to cleanup
-    cleanupCache();
-  }
-
-  const cacheKey = `${ownerId}:${region}`;
-  const cached = tenantCache.get(cacheKey);
-
-  if (cached && cached.expires > Date.now()) {
-    return cached.kv;
-  }
-
-  try {
-    const tenant = await resolveTenantFromOrgId(env, ownerId);
-    const bindings = resolveTenantBindings(env, tenant);
-
-    tenantCache.set(cacheKey, {
-      kv: bindings.kv,
-      region: bindings.region || region,
-      expires: Date.now() + TENANT_CACHE_TTL,
-    });
-
-    return bindings.kv;
-  } catch (error) {
-    console.warn("Failed to resolve tenant KV, using fallback", {
-      error: error instanceof Error ? error.message : String(error),
-      ownerId,
-      region,
-    });
-    return env.ai_passport_registry;
-  }
+interface Env {
+  ai_passport_registry: KVNamespace;
+  AP_VERSION: string;
+  VERIFY_RPM?: string; // Rate limit: requests per minute for verify endpoints
+  PASSPORT_SNAPSHOTS_BUCKET?: R2Bucket; // R2 bucket for fallback snapshots
 }
 
 /**
  * @swagger
- * components:
- *   schemas:
- *     VerifyResponse:
- *       type: object
- *       properties:
- *         valid:
- *           type: boolean
- *           description: Whether the passport is valid
- *         passport:
- *           $ref: '#/components/schemas/Passport'
- *         verification_status:
+ * /api/verify/{agent_id}:
+ *   get:
+ *     summary: Verify an agent passport
+ *     description: Retrieve and verify an AI agent passport by ID
+ *     operationId: verifyAgent
+ *     tags:
+ *       - Verification
+ *     parameters:
+ *       - name: agent_id
+ *         in: path
+ *         required: true
+ *         description: Unique identifier for the AI agent
+ *         schema:
  *           type: string
- *           enum: [verified, unverified, expired, revoked]
- *         etag:
- *           type: string
- *           description: ETag for caching
- *         source:
- *           type: string
- *           description: Data source (kv, cache, etc.)
- *         latency:
- *           type: number
- *           description: Response latency in ms
- *         cached:
- *           type: boolean
- *           description: Whether response was cached
- *         server_timing:
- *           type: string
- *           description: Server-Timing header value
+ *           example: "ap_128094d3"
+ *     responses:
+ *       200:
+ *         description: Agent passport found and verified
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Passport'
+ *             example:
+ *               agent_id: "ap_128094d3"
+ *               slug: "acme-support-bot"
+ *               name: "Acme Support Bot"
+ *               owner_id: "ap_org_456"
+ *               owner_type: "org"
+ *               owner_display: "Acme Corp"
+ *               controller_type: "api"
+ *               claimed: true
+ *               role: "agent"
+ *               description: "Customer support automation agent"
+ *               capabilities: [{"id": "payments.refund"}, {"id": "data.export", "params": {"max_rows": 1000}}]
+ *               limits:
+ *                 refund_amount_max_per_tx: 10000
+ *                 refund_amount_daily_cap: 100000
+ *                 max_export_rows: 1000
+ *                 allow_pii: false
+ *               regions: ["global", "us-east"]
+ *               status: "active"
+ *               verification_status: "github_verified"
+ *               verification_method: "github_verified"
+ *               verification_evidence:
+ *                 github_username: "acme"
+ *                 verified_at: "2024-01-15T10:30:00Z"
+ *               assurance_level: "L2"
+ *               assurance_method: "github_verified"
+ *               assurance_verified_at: "2024-01-15T10:30:00Z"
+ *               contact: "admin@acme.com"
+ *               links:
+ *                 homepage: "https://acme.com"
+ *                 docs: "https://docs.acme.com"
+ *                 repo: "https://github.com/acme/support-bot"
+ *               categories: ["support", "commerce"]
+ *               framework: ["n8n", "LangGraph"]
+ *               logo_url: "https://acme.com/logo.png"
+ *               source: "admin"
+ *               created_at: "2024-01-15T10:00:00Z"
+ *               updated_at: "2024-01-15T10:30:00Z"
+ *               version: "1.0.0"
+ *               model_info:
+ *                 model: "gpt-4"
+ *                 provider: "openai"
+ *               registry_key_id: "reg-2025-01"
+ *               canonical_hash: "sha256:abc123..."
+ *               registry_sig: "ed25519:def456..."
+ *               verified_at: "2024-01-15T10:30:00Z"
+ *               mcp:
+ *                 servers: ["https://mcp.stripe.com", "urn:mcp:acme:helpdesk"]
+ *                 tools: ["stripe.refunds.create", "notion.pages.export"]
+ *               attestations:
+ *                 - type: "custom"
+ *                   issuer: "aport-registry"
+ *                   reference: "att_123"
+ *                   claims: {"type": "github_verification", "verified_at": "2024-01-15T10:30:00Z"}
+ *                   signature: "ed25519:abc123..."
+ *               integrations:
+ *                 github:
+ *                   allowed_actors: ["my-bot[bot]", "dependabot[bot]"]
+ *                   allowed_apps: ["my-github-app"]
+ *               webhook_url: "https://webhook.example.com/agent-123"
+ *               email: "agent@example.com"
+ *               evaluation:
+ *                 pack_id: "payments.refund.v1"
+ *                 assurance_ok: true
+ *                 capability_ok: true
+ *                 limits_ok: true
+ *                 regions_ok: true
+ *                 mcp_ok: true
+ *                 reasons: []
+ *         headers:
+ *           ETag:
+ *             description: Entity tag for caching
+ *             schema:
+ *               type: string
+ *           Cache-Control:
+ *             description: Cache control directive
+ *             schema:
+ *               type: string
+ *               example: "public, s-maxage=60"
+ *           X-Agent-Passport-Version:
+ *             description: Version of the passport schema
+ *             schema:
+ *               type: string
+ *       304:
+ *         description: Not Modified - passport unchanged since last request
+ *         headers:
+ *           ETag:
+ *             description: Entity tag for caching
+ *             schema:
+ *               type: string
+ *       400:
+ *         description: Missing required parameter
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               error: "missing_agent_id"
+ *       404:
+ *         description: Agent passport not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               error: "not_found"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               error: "internal_server_error"
  */
+export const onRequestOptions: PagesFunction<Env> = async ({ request }) =>
+  new Response(null, { headers: cors(request) });
 
-export const onRequest: PagesFunction<{
-  ai_passport_registry: KVNamespace;
-  ai_passport_assets: R2Bucket;
-  PASSPORT_SNAPSHOTS_BUCKET?: R2Bucket;
-  VERIFY_RPM?: string;
-  AP_VERSION?: string;
-}> = async ({ request, params, env }) => {
-  const startTime = performance.now();
-  const requestId = `verify_${Date.now()}_${Math.random()
-    .toString(36)
-    .substring(2, 8)}`;
-  const agentId = params?.agent_id as string;
+export const onRequestGet: PagesFunction<Env> = async ({
+  request,
+  env,
+  params,
+}) => {
+  const startTime = Date.now();
+  const headers = cors(request);
+  const url = new URL(request.url);
+  const agentId = params.agent_id as string;
 
-  // CORS headers
-  const corsHeaders = cors(request);
-
-  // Enhanced performance monitoring
-  const perfLogger = createPerformanceLogger(agentId || "unknown");
+  // Efficient performance logging
+  const perfLogger = createPerformanceLogger(agentId);
   perfLogger.start("REQUEST_START", {
     userAgent: request.headers.get("user-agent")?.substring(0, 50),
     ifNoneMatch: request.headers.get("if-none-match"),
     cfRay: request.headers.get("cf-ray"),
-    region: (request as any).cf?.colo || "UNKNOWN",
+    cfConnectingIp: request.headers.get("cf-connecting-ip"),
   });
 
-  // Enhanced logging setup
-  const logger = createLogger(env.ai_passport_registry);
-  const getLogger = () => logger;
+  // Context-based verify parameters (for templates)
+  const tenantRef = url.searchParams.get("tenant_ref") || undefined;
+  const platformId = url.searchParams.get("platform_id") || undefined;
 
-  try {
-    // Initialize components (remove duplicate logger creation)
-    const cache = createCache(env.ai_passport_registry);
-    const rateLimiter = createVerifyRateLimiter(env.ai_passport_registry);
+  perfLogger.start("PARAMS_PARSED");
+  perfLogger.end("PARAMS_PARSED", { tenantRef, platformId });
 
-    // Initialize KV resolver for multi-region/multi-tenant support
-    const kvResolver = createKVResolver(env);
-
-    // Parse query parameters for template support
-    const url = new URL(request.url);
-    const tenantRef = url.searchParams.get("tenant_ref") || undefined;
-    const platformId = url.searchParams.get("platform_id") || undefined;
-    const version = url.searchParams.get("version") || "1.0.0";
-
-    perfLogger.start("PARAMS_PARSED");
-    perfLogger.end("PARAMS_PARSED", { tenantRef, platformId, version });
-
-    // Smart rate limiting with comprehensive browser detection - OPTIMIZED
-    const userAgent = request.headers.get("user-agent") || "";
-    const ifNoneMatch = request.headers.get("if-none-match");
-
-    // Declare variables at function scope
-    let rateLimitResult: {
-      allowed: boolean;
-      remaining: number;
-      resetTime: number;
-      retryAfter: number;
-    } = {
-      allowed: true,
-      remaining: 60,
-      resetTime: Date.now() + 60000,
-      retryAfter: 60,
-    };
-
-    let isBrowserRequest = false;
-    let isBot = false;
-
-    // Early return for cached requests - skip rate limiting entirely
-    if (ifNoneMatch) {
-      perfLogger.end("RATE_LIMIT", {
-        reason: "cached_request",
-        ifNoneMatch: true,
-      });
-    } else {
-      // Optimize browser detection with early returns
-      isBrowserRequest =
-        userAgent.includes("Mozilla") ||
-        userAgent.includes("Chrome") ||
-        userAgent.includes("Safari") ||
-        userAgent.includes("Firefox") ||
-        userAgent.includes("Edge");
-      isBot =
-        userAgent.includes("bot") ||
-        userAgent.includes("crawler") ||
-        userAgent.includes("spider") ||
-        userAgent.includes("Bot");
-
-      perfLogger.start("RATE_LIMIT");
-      // Only rate limit non-browser requests
-      if (!isBrowserRequest) {
-        const clientIP = request.headers.get("CF-Connecting-IP") || "unknown";
-        const limitResult = await rateLimiter.checkLimit(clientIP);
-        rateLimitResult = {
-          allowed: limitResult.allowed,
-          remaining: limitResult.remaining,
-          resetTime: limitResult.resetTime,
-          retryAfter: limitResult.retryAfter || 60,
-        };
-
-        perfLogger.end("RATE_LIMIT", {
-          clientIP,
-          allowed: rateLimitResult.allowed,
-          remaining: rateLimitResult.remaining,
-          isBot,
-        });
-      } else {
-        perfLogger.end("RATE_LIMIT", {
-          reason: "browser_request",
-          isBrowserRequest,
-          isBot,
-        });
-      }
-
-      if (!rateLimitResult.allowed) {
-        perfLogger.log("RATE_LIMIT_BLOCKED", performance.now() - startTime, {
-          retryAfter: rateLimitResult.retryAfter,
-          remaining: rateLimitResult.remaining,
-          clientIP: request.headers.get("CF-Connecting-IP") || "unknown",
-        });
-
-        const errorResponse = createErrorResponse(
-          "rate_limit_exceeded",
-          "Too many requests. Please try again later.",
-          429,
-          requestId,
-          corsHeaders,
-          {
-            "Retry-After": rateLimitResult.retryAfter.toString(),
-            "X-RateLimit-Limit": "60",
-            "X-RateLimit-Remaining": "0",
-            "X-RateLimit-Reset": new Date(
-              rateLimitResult.resetTime
-            ).toISOString(),
-          }
-        );
-
-        perfLogger.logSummary();
-        await getLogger().logRequest(request, errorResponse, startTime, {
-          agentId,
-        });
-        return errorResponse;
-      }
+  // Initialize logger (lazy initialization for performance)
+  let logger: any = null;
+  const getLogger = () => {
+    if (!logger) {
+      logger = createLogger(env.ai_passport_registry);
     }
+    return logger;
+  };
 
-    // Enhanced validation with comprehensive error handling
-    perfLogger.start("VALIDATION");
-    const validation = validateAgentId(agentId);
+  // Rate limiting (ultra-optimized - skip for most requests)
+  let rateLimitResult: any = {
+    allowed: true,
+    remaining: 60,
+    resetTime: Date.now() + 60000,
+    retryAfter: 60,
+  };
 
-    if (!validation.valid) {
-      perfLogger.end("VALIDATION", {
-        agentId,
-        reason: "invalid_agent_id",
-        error: validation.error,
-      });
+  // Skip rate limiting entirely for cached requests and common user agents
+  const ifNoneMatch = request.headers.get("if-none-match");
+  const userAgent = request.headers.get("user-agent") || "";
+  const isBrowserRequest =
+    userAgent.includes("Mozilla") ||
+    userAgent.includes("Chrome") ||
+    userAgent.includes("Safari");
 
-      const errorResponse = createErrorResponse(
-        "invalid_agent_id",
-        validation.error || "Invalid agent ID",
-        400,
-        requestId,
-        corsHeaders
-      );
-
-      perfLogger.logSummary();
-      await getLogger().logRequest(request, errorResponse, startTime, {
-        agentId,
-      });
-      return errorResponse;
-    }
-
-    // Use validated and normalized agentId
-    const normalizedAgentId = validation.normalized!;
-    perfLogger.end("VALIDATION", { normalizedAgentId });
-
-    // Enhanced performance timing
-    const timing = {
-      cacheLookup: 0,
-      passportBuild: 0,
-      regionResolution: 0,
-      kvLookup: 0,
-      r2Fallback: 0,
-      directKVFallback: 0,
-      total: 0,
-    };
-
-    // First operation: kv.get('agent_info:' + agent_id, 'json')
-    perfLogger.start("AGENT_INFO_LOOKUP");
-    const agentInfo = await kvResolver.getAgentInfo(normalizedAgentId);
-    perfLogger.end("AGENT_INFO_LOOKUP", {
-      found: !!agentInfo,
-      region: agentInfo?.region,
+  perfLogger.start("RATE_LIMIT");
+  // Only do rate limiting for non-cached, non-browser requests
+  if (!ifNoneMatch && !isBrowserRequest) {
+    const rateLimiter = createVerifyRateLimiter(
+      env.ai_passport_registry,
+      parseInt(env.VERIFY_RPM || "60")
+    );
+    const clientIP = RateLimiter.getClientIP(request);
+    rateLimitResult = await rateLimiter.checkLimit(clientIP);
+    perfLogger.end("RATE_LIMIT", {
+      clientIP,
+      allowed: rateLimitResult.allowed,
+      remaining: rateLimitResult.remaining,
     });
+  } else {
+    perfLogger.end("RATE_LIMIT", {
+      reason: ifNoneMatch ? "cached_request" : "browser_request",
+      ifNoneMatch: !!ifNoneMatch,
+      isBrowserRequest,
+    });
+  }
 
-    // If agent_info missing → fail-closed (403 with agent_not_indexed)
-    if (!agentInfo) {
-      perfLogger.log("AGENT_NOT_INDEXED", performance.now() - startTime, {
-        agentId: normalizedAgentId,
-      });
-
-      const errorResponse = createErrorResponse(
-        "agent_not_indexed",
-        "Agent not found in registry",
-        403,
-        requestId,
-        corsHeaders
-      );
-
-      perfLogger.logSummary();
-      await getLogger().logRequest(request, errorResponse, startTime, {
-        agentId: normalizedAgentId,
-      });
-      return errorResponse;
-    }
-
-    // Get region and select tenant bindings
-    const agentRegion = agentInfo.region || "US";
-    const ownerId = agentInfo.owner_id;
-
-    // Resolve tenant information for multi-tenant support with caching
-    let tenantKV = env.ai_passport_registry; // fallback
-    if (ownerId) {
-      tenantKV = await getTenantKV(env, ownerId, agentRegion);
-    }
-
-    // Initialize tiered cache system
-    const tieredCache = createTieredPassportCache(tenantKV);
-    // Optimize cache key generation - pre-compute parts
-    const cacheKey = `verify:${normalizedAgentId}:${version}:${agentRegion}:${
-      ownerId || "default"
-    }`;
-
-    // Multi-level cache lookup with fallbacks
-    let passportResult: any = null;
-    const cacheStart = performance.now();
-
-    // L1/L2/L3 Tiered Cache Lookup
-    perfLogger.start("TIERED_CACHE_LOOKUP");
-    try {
-      passportResult = await tieredCache.getPassport(normalizedAgentId);
-      timing.cacheLookup = performance.now() - cacheStart;
-      perfLogger.end("TIERED_CACHE_LOOKUP", {
-        found: !!passportResult,
-        source: passportResult?.source,
-        cacheLatency: passportResult?.latency,
-      });
-    } catch (error) {
-      // Fallback to direct KV lookup if tiered cache fails
-      perfLogger.start("DIRECT_KV_FALLBACK");
-      passportResult = await tryDirectKVLookup(
-        tenantKV,
-        normalizedAgentId,
-        version
-      );
-      timing.directKVFallback = performance.now() - cacheStart;
-      perfLogger.end("DIRECT_KV_FALLBACK", {
-        found: !!passportResult,
-        source: passportResult?.source,
-        latency: timing.directKVFallback,
-      });
-    }
-
-    // If still not found, try R2 snapshot for high availability
-    if (!passportResult && env.PASSPORT_SNAPSHOTS_BUCKET) {
-      perfLogger.start("R2_FALLBACK");
-      const r2Start = performance.now();
-      try {
-        passportResult = await tryR2SnapshotFallback(
-          env.PASSPORT_SNAPSHOTS_BUCKET,
-          normalizedAgentId,
-          version
-        );
-        timing.r2Fallback = performance.now() - r2Start;
-        perfLogger.end("R2_FALLBACK", {
-          found: !!passportResult,
-          latency: timing.r2Fallback,
-        });
-      } catch (error) {
-        perfLogger.end("R2_FALLBACK", {
-          error: error instanceof Error ? error.message : String(error),
-        });
-      }
-    }
-
-    // Handle ETag matching for cached results
-    if (passportResult && ifNoneMatch && passportResult.etag === ifNoneMatch) {
-      perfLogger.log("ETAG_MATCH", performance.now() - startTime, {
-        source: passportResult.source,
-      });
-
-      const notModifiedResponse = new Response(null, {
-        status: 304,
+  if (!rateLimitResult.allowed) {
+    perfLogger.log("RATE_LIMIT_BLOCKED", Date.now() - startTime, {
+      retryAfter: rateLimitResult.retryAfter,
+      remaining: rateLimitResult.remaining,
+    });
+    const response = new Response(
+      JSON.stringify({
+        error: "rate_limit_exceeded",
+        message: "Too many requests. Please try again later.",
+        retry_after: rateLimitResult.retryAfter,
+      }),
+      {
+        status: 429,
         headers: {
-          ETag: ifNoneMatch,
-          "Cache-Control":
-            "public, max-age=0, s-maxage=60, stale-while-revalidate=30, stale-if-error=86400",
-          "X-Registry-Key-ID": `cache-${passportResult.source}`,
-          "X-RateLimit-Limit": "60",
-          "X-RateLimit-Remaining": rateLimitResult.remaining.toString(),
-          "X-RateLimit-Reset": new Date(
+          "content-type": "application/json",
+          "retry-after": rateLimitResult.retryAfter?.toString() || "60",
+          "x-ratelimit-limit": "60",
+          "x-ratelimit-remaining": "0",
+          "x-ratelimit-reset": new Date(
             rateLimitResult.resetTime
           ).toISOString(),
-          ...corsHeaders,
+          ...headers,
         },
-      });
+      }
+    );
 
-      perfLogger.logSummary();
-      await getLogger().logRequest(request, notModifiedResponse, startTime, {
-        agentId: normalizedAgentId,
-        cacheHit: true,
-        cacheSource: passportResult.source,
-        cacheLatency: passportResult.latency,
-        region: (request as any).cf?.colo || "unknown",
-        cfRay: request.headers.get("cf-ray") || undefined,
-        isBot,
-        isBrowser: isBrowserRequest,
-      });
-      return notModifiedResponse;
-    }
+    perfLogger.logSummary();
+    await getLogger().logRequest(request, response, startTime, { agentId });
+    return response;
+  }
 
-    // Return cached result if found - return passport directly like old implementation
-    if (passportResult) {
-      perfLogger.log("CACHE_HIT", performance.now() - startTime, {
-        source: passportResult.source,
-        latency: passportResult.latency,
-      });
+  // Validate agentId
+  perfLogger.start("VALIDATION");
+  if (!agentId || typeof agentId !== "string" || agentId.trim().length === 0) {
+    perfLogger.end("VALIDATION", {
+      agentId,
+      reason: "invalid_agent_id",
+    });
+    const response = new Response(
+      JSON.stringify({
+        error: "invalid_agent_id",
+        message: "Agent ID is required and must be a non-empty string",
+      }),
+      {
+        status: 400,
+        headers: { "content-type": "application/json", ...headers },
+      }
+    );
 
-      // Handle both string and object passport data to prevent double-encoding
+    perfLogger.logSummary();
+    await getLogger().logRequest(request, response, startTime, { agentId });
+    return response;
+  }
+
+  // Normalize agentId
+  const normalizedAgentId = agentId.trim();
+  perfLogger.end("VALIDATION", { normalizedAgentId });
+
+  // Initialize tiered cache with version
+  perfLogger.start("CACHE_INIT");
+  const tieredCache = createTieredPassportCache(
+    env.ai_passport_registry,
+    env.AP_VERSION
+  );
+  perfLogger.end("CACHE_INIT", { version: env.AP_VERSION });
+
+  // Get passport using 3-tier caching strategy
+  perfLogger.start("CACHE_LOOKUP");
+  const cacheResult = await tieredCache.getPassport(normalizedAgentId);
+  perfLogger.end("CACHE_LOOKUP", {
+    found: !!cacheResult,
+    source: cacheResult?.source,
+    cacheLatency: cacheResult?.latency,
+  });
+
+  if (!cacheResult) {
+    // Try direct KV lookup as fallback (optimized - no debug logging)
+    perfLogger.start("FALLBACK_LOOKUP");
+    const fallbackResult = await tryDirectKVLookupOptimized(
+      env.ai_passport_registry,
+      normalizedAgentId,
+      env.AP_VERSION
+    );
+    perfLogger.end("FALLBACK_LOOKUP", {
+      found: !!fallbackResult,
+      source: fallbackResult?.source,
+    });
+
+    if (fallbackResult) {
+      // Use fallback result
+      const { passport, etag, source, latency } = fallbackResult;
+
+      // Continue with normal response flow
       const serializedPassport =
-        typeof passportResult.passport === "string"
-          ? passportResult.passport
-          : JSON.stringify(passportResult.passport);
+        typeof passport === "string" ? passport : JSON.stringify(passport);
+      const registryKeyId = `cache-${source}`;
 
-      const registryKeyId = `cache-${passportResult.source}`;
-      const aportCacheStatus =
-        passportResult.source === "l1" || passportResult.source === "l2"
-          ? "HIT"
-          : "MISS";
-      const region = (request as any).cf?.colo || "UNKNOWN";
+      // Record performance metrics
+      recordVerifyPerformance(
+        agentId,
+        source,
+        latency,
+        Date.now() - startTime,
+        false // Not a cache hit
+      );
 
-      // Build comprehensive Server-Timing header
+      console.log(
+        `Served passport ${agentId} from fallback ${source} (${latency}ms)`
+      );
+
+      // Return passport with optimized headers
+      const totalDuration = Date.now() - startTime;
+      const workerCpuTime = totalDuration - latency;
+      const region = request.cf?.colo || "UNKNOWN";
+
       const serverTimingParts = [
-        `cache;desc="${passportResult.source.toUpperCase()}"`,
-        `worker;dur=${(
-          performance.now() -
-          startTime -
-          passportResult.latency
-        ).toFixed(1)}`,
-        `kv;dur=${
-          passportResult.source === "l3"
-            ? passportResult.latency.toFixed(1)
-            : "0"
-        }`,
-        `serialize;dur=1.0`,
+        `fallback;desc="${source.toUpperCase()}"`,
+        `worker;dur=${workerCpuTime.toFixed(1)}`,
+        `kv;dur=${latency.toFixed(1)}`,
         `region;desc="${region}"`,
       ];
 
       const response = new Response(serializedPassport, {
         status: 200,
         headers: {
-          "Content-Type": "application/json",
-          "Cache-Control":
+          "content-type": "application/json",
+          "cache-control":
             "public, max-age=0, s-maxage=60, stale-while-revalidate=30, stale-if-error=86400",
-          "Server-Timing": serverTimingParts.join(", "),
-          ETag: passportResult.etag,
-          "X-Registry-Key-ID": registryKeyId,
-          "X-Cache-Source": passportResult.source,
-          "X-Cache-Latency": passportResult.latency.toString(),
-          "Aport-Cache": aportCacheStatus,
-          "X-RateLimit-Limit": "60",
-          "X-RateLimit-Remaining": rateLimitResult.remaining.toString(),
-          "X-RateLimit-Reset": new Date(
-            rateLimitResult.resetTime
-          ).toISOString(),
-          ...corsHeaders,
+          "server-timing": serverTimingParts.join(", "),
+          etag: etag!,
+          "x-registry-key-id": registryKeyId || "unknown",
+          "x-cache-source": source,
+          "x-cache-latency": latency.toString(),
+          "aport-cache": "MISS",
+          ...headers,
         },
       });
 
       perfLogger.logSummary();
-      await getLogger().logRequest(request, response, startTime, {
-        agentId: normalizedAgentId,
-        cacheHit: true,
-        cacheSource: passportResult.source,
-        cacheLatency: passportResult.latency,
-        region: (request as any).cf?.colo || "unknown",
-        cfRay: request.headers.get("cf-ray") || undefined,
-        isBot,
-        isBrowser: isBrowserRequest,
-      });
+      await getLogger().logRequest(request, response, startTime, { agentId });
       return response;
     }
 
-    // If no cached result, perform fresh KV lookup and build
-    perfLogger.start("FRESH_KV_LOOKUP");
-    const passportData = await kvResolver.getPassport(
+    // Record error for performance monitoring
+    recordVerifyError();
+    perfLogger.log("PASSPORT_NOT_FOUND", Date.now() - startTime, {
       normalizedAgentId,
-      agentRegion,
-      ownerId
-    );
-    const verifyView = await kvResolver.getVerifyView(
-      normalizedAgentId,
-      agentRegion,
-      ownerId
-    );
-    perfLogger.end("FRESH_KV_LOOKUP", {
-      passportFound: !!passportData,
-      verifyViewFound: !!verifyView,
-      region: agentRegion,
-      ownerId,
     });
 
-    timing.kvLookup = performance.now() - startTime;
-
-    if (!passportData) {
-      perfLogger.log("PASSPORT_NOT_FOUND", performance.now() - startTime, {
-        agentId: normalizedAgentId,
-        region: agentRegion,
-        ownerId,
-      });
-
-      const errorResponse = createErrorResponse(
-        "not_found",
-        "Agent passport not found",
-        404,
-        requestId,
-        corsHeaders
-      );
-
-      perfLogger.logSummary();
-      await getLogger().logRequest(request, errorResponse, startTime, {
-        agentId: normalizedAgentId,
-      });
-      return errorResponse;
-    }
-
-    // Build passport object
-    perfLogger.start("PASSPORT_BUILD");
-    const passport = buildPassportObject(passportData as PassportData, version);
-    const etag = generateETag(passport);
-    perfLogger.end("PASSPORT_BUILD", {
-      agentId: passport.agent_id,
-      version: passport.version,
-    });
-
-    timing.passportBuild = performance.now() - startTime;
-
-    // Determine verification status
-    const verificationStatus = (verifyView as any)?.status || "unverified";
-    const isValid =
-      verificationStatus === "verified" && passport.status === "active";
-
-    // Build response with enhanced timing - return passport directly like old implementation
-    const totalLatency = performance.now() - startTime;
-    const serializedPassport = JSON.stringify(passport);
-    const registryKeyId = "cache-l3";
-    const aportCacheStatus = "MISS";
-    const region = (request as any).cf?.colo || "UNKNOWN";
-
-    // Pre-warm the tiered cache with the fresh result
-    try {
-      await tieredCache.preWarmPassport(
-        normalizedAgentId,
-        passportData as PassportData
-      );
-    } catch (error) {
-      console.warn("Failed to pre-warm cache", {
-        error: error instanceof Error ? error.message : String(error),
-        agentId: normalizedAgentId,
-      });
-    }
-
-    // Record enhanced performance metrics
-    recordVerifyPerformance(
-      normalizedAgentId,
-      "l3", // KV source
-      timing.kvLookup,
-      totalLatency,
-      false // not cached
+    const response = new Response(
+      JSON.stringify({
+        error: "not_found",
+        message: "Agent passport not found",
+      }),
+      {
+        status: 404,
+        headers: { "content-type": "application/json", ...headers },
+      }
     );
 
-    perfLogger.log("VERIFY_SUCCESS", totalLatency, {
-      agentId: normalizedAgentId,
-      region: agentRegion,
-      ownerId,
-      verificationStatus,
-      isValid,
-      cacheLatency: timing.cacheLookup,
-      kvLatency: timing.kvLookup,
-      buildLatency: timing.passportBuild,
-      r2Latency: timing.r2Fallback,
-      directKVLatency: timing.directKVFallback,
+    perfLogger.logSummary();
+    await getLogger().logRequest(request, response, startTime, { agentId });
+    return response;
+  }
+
+  const { passport, etag, source, latency } = cacheResult;
+
+  // Handle both string and object passport data to prevent double-encoding
+  perfLogger.start("SERIALIZATION");
+  const serializedPassport =
+    typeof passport === "string" ? passport : JSON.stringify(passport);
+  const registryKeyId = `cache-${source}`;
+  perfLogger.end("SERIALIZATION", {
+    source,
+    isString: typeof passport === "string",
+    passportSize: serializedPassport.length,
+  });
+
+  // Record performance metrics
+  perfLogger.start("METRICS");
+  recordVerifyPerformance(
+    agentId,
+    source,
+    latency,
+    Date.now() - startTime,
+    source !== "l3" // L1 and L2 are cache hits, L3 is not
+  );
+  perfLogger.end("METRICS", {
+    source,
+    cacheHit: source !== "l3",
+    cacheLatency: latency,
+  });
+
+  console.log(`Served passport ${agentId} from ${source} cache (${latency}ms)`);
+
+  // B1: Check If-None-Match header for conditional requests
+  perfLogger.start("CONDITIONAL_CHECK");
+  if (ifNoneMatch === etag) {
+    perfLogger.end("CONDITIONAL_CHECK", {
+      etag: etag?.substring(0, 20) + "...",
+      ifNoneMatch: ifNoneMatch?.substring(0, 20) + "...",
     });
-
-    // Build comprehensive Server-Timing header
-    const serverTimingParts = [
-      `cache;desc="L3"`,
-      `worker;dur=${(totalLatency - timing.kvLookup).toFixed(1)}`,
-      `kv;dur=${timing.kvLookup.toFixed(1)}`,
-      `serialize;dur=1.0`,
-      `region;desc="${region}"`,
-    ];
-
-    const response = new Response(serializedPassport, {
-      status: 200,
+    const response = new Response(null, {
+      status: 304,
       headers: {
-        "Content-Type": "application/json",
-        "Cache-Control":
+        etag: etag!,
+        "cache-control":
           "public, max-age=0, s-maxage=60, stale-while-revalidate=30, stale-if-error=86400",
-        "Server-Timing": serverTimingParts.join(", "),
-        ETag: etag,
-        "X-Registry-Key-ID": registryKeyId,
-        "X-Cache-Source": "l3",
-        "X-Cache-Latency": timing.kvLookup.toString(),
-        "Aport-Cache": aportCacheStatus,
-        "X-Request-ID": requestId,
-        "X-RateLimit-Limit": "60",
-        "X-RateLimit-Remaining": rateLimitResult.remaining.toString(),
-        "X-RateLimit-Reset": new Date(rateLimitResult.resetTime).toISOString(),
-        ...corsHeaders,
+        "x-registry-key-id": registryKeyId || "unknown",
+        "x-ratelimit-limit": "60",
+        "x-ratelimit-remaining": rateLimitResult.remaining.toString(),
+        "x-ratelimit-reset": new Date(rateLimitResult.resetTime).toISOString(),
+        ...headers,
       },
     });
 
     perfLogger.logSummary();
+
+    // Enhanced analytics metadata for 304 responses
+    const logUserAgent = request.headers.get("user-agent") || "";
+    const isBrowser =
+      logUserAgent.includes("Mozilla") ||
+      logUserAgent.includes("Chrome") ||
+      logUserAgent.includes("Safari");
+    const isBot =
+      logUserAgent.includes("bot") ||
+      logUserAgent.includes("crawler") ||
+      logUserAgent.includes("spider");
+
     await getLogger().logRequest(request, response, startTime, {
-      agentId: normalizedAgentId,
-      cacheHit: false,
-      cacheSource: "l3",
-      cacheLatency: timing.kvLookup,
-      region: (request as any).cf?.colo || "unknown",
+      agentId,
+      cacheHit: true, // 304 means cache hit
+      cacheSource: source,
+      cacheLatency: latency,
+      region: request.cf?.colo || "unknown",
       cfRay: request.headers.get("cf-ray") || undefined,
       isBot,
-      isBrowser: isBrowserRequest,
+      isBrowser,
     });
     return response;
-  } catch (error) {
-    const errorLatency = performance.now() - startTime;
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
-    const agentIdForError = agentId || "unknown";
-
-    perfLogger.log("VERIFY_ERROR", errorLatency, {
-      error: errorMessage,
-      agentId: agentIdForError,
-    });
-
-    recordVerifyError();
-
-    const errorResponse = createErrorResponse(
-      "internal_server_error",
-      "Internal server error",
-      500,
-      requestId,
-      corsHeaders
-    );
-
-    perfLogger.logSummary();
-    await getLogger().logRequest(request, errorResponse, startTime, {
-      agentId: agentIdForError,
-    });
-    return errorResponse;
   }
+  perfLogger.end("CONDITIONAL_CHECK", {
+    etag: etag?.substring(0, 20) + "...",
+    ifNoneMatch: ifNoneMatch?.substring(0, 20) + "...",
+  });
+
+  // Return passport with optimized headers and cache metrics
+  perfLogger.start("RESPONSE_CREATION");
+
+  // Calculate detailed timing breakdown for Server-Timing header
+  const totalDuration = Date.now() - startTime;
+  const workerCpuTime = totalDuration - latency; // Approximate worker CPU time
+  const region = request.cf?.colo || "UNKNOWN";
+
+  // Build Server-Timing header with detailed breakdown
+  const serverTimingParts = [
+    `cache;desc="${source.toUpperCase()}"`,
+    `worker;dur=${workerCpuTime.toFixed(1)}`,
+    `kv;dur=${source === "l3" ? latency.toFixed(1) : "0"}`,
+    `serialize;dur=1.0`, // Approximate serialization time
+    `region;desc="${region}"`,
+  ];
+
+  // Determine cache status for aport-cache header
+  const aportCacheStatus =
+    source === "l1"
+      ? "HIT"
+      : source === "l2"
+      ? "HIT"
+      : source === "l3"
+      ? "MISS"
+      : "MISS";
+
+  const response = new Response(serializedPassport, {
+    status: 200,
+    headers: {
+      "content-type": "application/json",
+      "cache-control":
+        "public, max-age=0, s-maxage=60, stale-while-revalidate=30, stale-if-error=86400",
+      "server-timing": serverTimingParts.join(", "),
+      etag: etag!,
+      "x-registry-key-id": registryKeyId || "unknown",
+      "x-cache-source": source,
+      "x-cache-latency": latency.toString(),
+      "aport-cache": aportCacheStatus,
+      "x-ratelimit-limit": "60",
+      "x-ratelimit-remaining": rateLimitResult.remaining.toString(),
+      "x-ratelimit-reset": new Date(rateLimitResult.resetTime).toISOString(),
+      ...headers,
+    },
+  });
+  perfLogger.end("RESPONSE_CREATION", {
+    status: 200,
+    responseSize: serializedPassport.length,
+    headersCount: Object.keys(response.headers).length,
+  });
+
+  perfLogger.log("REQUEST_COMPLETE", totalDuration, {
+    totalDuration,
+    source,
+    cacheLatency: latency,
+    passportSize: serializedPassport.length,
+    success: true,
+  });
+
+  console.log(
+    `Verify endpoint completed in ${totalDuration}ms for ${agentId} (source: ${registryKeyId})`
+  );
+
+  // Log all performance data once at the end
+  perfLogger.logSummary();
+
+  // Async logging to avoid blocking response with enhanced analytics metadata
+  const logUserAgent = request.headers.get("user-agent") || "";
+  const isBrowser =
+    logUserAgent.includes("Mozilla") ||
+    logUserAgent.includes("Chrome") ||
+    logUserAgent.includes("Safari");
+  const isBot =
+    logUserAgent.includes("bot") ||
+    logUserAgent.includes("crawler") ||
+    logUserAgent.includes("spider");
+
+  getLogger()
+    .logRequest(request, response, startTime, {
+      agentId,
+      cacheHit: source !== "l3",
+      cacheSource: source,
+      cacheLatency: latency,
+      region: request.cf?.colo || "unknown",
+      cfRay: request.headers.get("cf-ray") || undefined,
+      isBot,
+      isBrowser,
+    })
+    .catch((error: any) => {
+      console.error("Logging error:", error);
+    });
+  return response;
 };
+
+// buildPassportObject is now imported from serialization.ts for consistency
+// ETag generation is handled by the tiered cache system

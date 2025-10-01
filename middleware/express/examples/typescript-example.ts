@@ -19,7 +19,7 @@ app.use(express.json());
 // CONFIGURATION
 // ============================================================================
 
-const AGENT_ID = "aeebc92d-13fb-4e23-8c3c-1aa82b167da645678"; // Your agent ID
+const AGENT_ID = "ap_128094d345678"; // Your agent ID
 
 // ============================================================================
 // TYPE-SAFE ROUTE HANDLERS

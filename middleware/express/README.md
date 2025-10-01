@@ -58,7 +58,7 @@ app.post('/api/refunds', (req, res) => {
 ```javascript
 const { requirePolicy } = require('@agent-passport/middleware-express');
 
-const AGENT_ID = "aeebc92d-13fb-4e23-8c3c-1aa82b167da645678"; // Your agent ID
+const AGENT_ID = "ap_128094d345678"; // Your agent ID
 
 // Explicit agent ID (preferred)
 app.post('/api/refunds', 
@@ -150,7 +150,7 @@ After successful policy verification, the request object contains:
 ```javascript
 app.post('/api/refunds', requirePolicy("payments.refund.v1", AGENT_ID), (req, res) => {
   // req.agent - Verified agent passport data
-  console.log(req.agent.agent_id);        // "aeebc92d-13fb-4e23-8c3c-1aa82b167da645678"
+  console.log(req.agent.agent_id);        // "ap_128094d345678"
   console.log(req.agent.assurance_level); // "L2"
   console.log(req.agent.capabilities);    // ["payments.refund"]
   
@@ -205,7 +205,7 @@ The middleware returns appropriate HTTP status codes:
 {
   "error": "policy_violation",
   "message": "Policy violation",
-  "agent_id": "aeebc92d-13fb-4e23-8c3c-1aa82b167da645678",
+  "agent_id": "ap_128094d345678",
   "policy_id": "payments.refund.v1"
 }
 
@@ -236,7 +236,7 @@ app.use(agentPassportMiddleware({
 
 // Route-specific policy enforcement
 app.post('/api/refunds', 
-  requirePolicy("payments.refund.v1", "aeebc92d-13fb-4e23-8c3c-1aa82b167da645678"),
+  requirePolicy("payments.refund.v1", "ap_128094d345678"),
   (req: AgentRequest, res: Response) => {
     // Type-safe access to agent data
     const agentId = req.agent.agent_id;
@@ -263,7 +263,7 @@ app.post('/api/refunds',
 
 ```javascript
 // ✅ EXPLICIT AGENT ID (Most Secure)
-const AGENT_ID = "aeebc92d-13fb-4e23-8c3c-1aa82b167da645678";
+const AGENT_ID = "ap_128094d345678";
 app.post('/api/refunds', 
   requirePolicy("payments.refund.v1", AGENT_ID),  // Agent ID in function
   handler
@@ -274,7 +274,7 @@ app.post('/api/export',
   requirePolicy("data.export.v1"),  // No agent ID - uses header
   handler
 );
-// Client sends: X-Agent-Passport-Id: aeebc92d-13fb-4e23-8c3c-1aa82b167da645678
+// Client sends: X-Agent-Passport-Id: ap_128094d345678
 
 // ✅ GLOBAL MIDDLEWARE (Uses Header)
 app.use(agentPassportMiddleware({
@@ -289,7 +289,7 @@ app.use(agentPassportMiddleware({
 AGENT_PASSPORT_BASE_URL=https://aport.io
 
 # Default agent ID for development (optional)
-AGENT_PASSPORT_AGENT_ID=aeebc92d-13fb-4e23-8c3c-1aa82b167da645678
+AGENT_PASSPORT_AGENT_ID=ap_128094d345678
 ```
 
 ### Skip Paths
@@ -312,7 +312,7 @@ const { requirePolicy } = require('@agent-passport/middleware-express');
 const app = express();
 app.use(express.json());
 
-const AGENT_ID = "aeebc92d-13fb-4e23-8c3c-1aa82b167da645678";
+const AGENT_ID = "ap_128094d345678";
 
 // Refund processing with policy enforcement
 app.post('/api/refunds', 

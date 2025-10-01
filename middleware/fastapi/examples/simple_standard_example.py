@@ -28,7 +28,7 @@ app = FastAPI(title="Agent Passport Simple Example")
 # YOUR EXISTING AGENT ID
 # ============================================================================
 
-AGENT_ID = "agents/aeebc92d-13fb-4e23-8c3c-1aa82b167da6"  # Your existing agent ID
+AGENT_ID = "agents/ap_128094d3"  # Your existing agent ID
 
 # Add simplified middleware to the app with configuration
 from agent_passport_middleware import AgentPassportMiddlewareOptions

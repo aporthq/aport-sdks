@@ -28,7 +28,7 @@ interface IssueOrgKeyRequest {
  *         agent_id:
  *           type: string
  *           description: Agent ID to issue org key for
- *           example: "aeebc92d-13fb-4e23-8c3c-1aa82b167da6"
+ *           example: "ap_128094d3"
  *         owner_email:
  *           type: string
  *           description: Owner email address
@@ -61,7 +61,7 @@ interface IssueOrgKeyRequest {
  *         agent_id:
  *           type: string
  *           description: Agent ID
- *           example: "aeebc92d-13fb-4e23-8c3c-1aa82b167da6"
+ *           example: "ap_128094d3"
  *         org_key_id:
  *           type: string
  *           description: Generated org key ID

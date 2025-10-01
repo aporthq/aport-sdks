@@ -110,7 +110,7 @@ jobs:
       - name: Install dependencies
         run: |
           cd sdk/python
-          pip install build twine pytest
+          pip install build twine pytest pytest-asyncio
 
       - name: Build package
         run: |
@@ -166,10 +166,30 @@ jobs:
           cd middleware/express
           npm ci
 
+      - name: Debug directory structure
+        run: |
+          echo "Current directory structure:"
+          find . -name "package.json" | head -10
+          echo "Contents of middleware/express:"
+          ls -la middleware/express/
+          echo "Contents of sdk:"
+          ls -la sdk/
+
       - name: Install local SDK
         run: |
           cd middleware/express
-          npm install ../sdk/node
+          # Try different paths to find the SDK
+          if [ -f "../sdk/node/package.json" ]; then
+            echo "Installing from ../sdk/node"
+            npm install ../sdk/node
+          elif [ -f "../../sdk/node/package.json" ]; then
+            echo "Installing from ../../sdk/node"
+            npm install ../../sdk/node
+          else
+            echo "SDK not found, listing available directories:"
+            find . -name "package.json" -path "*/sdk/*"
+            exit 1
+          fi
 
       - name: Build
         run: |
@@ -216,12 +236,32 @@ jobs:
       - name: Install dependencies
         run: |
           cd middleware/fastapi
-          pip install build twine
+          pip install build twine pytest pytest-asyncio
+
+      - name: Debug directory structure
+        run: |
+          echo "Current directory structure:"
+          find . -name "setup.py" | head -10
+          echo "Contents of middleware/fastapi:"
+          ls -la middleware/fastapi/
+          echo "Contents of sdk:"
+          ls -la sdk/
 
       - name: Install local SDK
         run: |
           cd middleware/fastapi
-          pip install -e ../sdk/python
+          # Try different paths to find the SDK
+          if [ -f "../sdk/python/setup.py" ]; then
+            echo "Installing from ../sdk/python"
+            pip install -e ../sdk/python
+          elif [ -f "../../sdk/python/setup.py" ]; then
+            echo "Installing from ../../sdk/python"
+            pip install -e ../../sdk/python
+          else
+            echo "SDK not found, listing available directories:"
+            find . -name "setup.py" -path "*/sdk/*"
+            exit 1
+          fi
 
       - name: Build package
         run: |

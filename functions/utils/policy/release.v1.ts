@@ -27,7 +27,7 @@ export async function evaluateReleaseV1(
       allow: false,
       reasons: [
         {
-          code: "MISSING_REQUIRED_FIELDS",
+          code: "oap.missing_required_fields",
           message: "Missing required fields: repository, version, files",
           severity: "error",
         },
@@ -92,7 +92,7 @@ async function checkRepositoryPermissions(
 
     if (!hasReleaseCapability) {
       reasons.push({
-        code: "INSUFFICIENT_PERMISSIONS",
+        code: "oap.unknown_capability",
         message: `Agent does not have release permission for repository ${repository}`,
         severity: "error",
       });
@@ -113,7 +113,7 @@ async function checkVersionFormat(
 
   if (!semverRegex.test(version)) {
     reasons.push({
-      code: "INVALID_VERSION_FORMAT",
+      code: "oap.format_unsupported",
       message: `Version ${version} does not follow semantic versioning`,
       severity: "error",
     });
@@ -138,7 +138,7 @@ async function checkFileRestrictions(
 
   if (restrictedFiles.length > 0) {
     reasons.push({
-      code: "RESTRICTED_FILES",
+      code: "oap.file_forbidden",
       message: `Files with restricted extensions: ${restrictedFiles.join(
         ", "
       )}`,
@@ -158,7 +158,7 @@ async function checkAssuranceLevel(
 
   if (!passport.assurance_level || passport.assurance_level !== requiredLevel) {
     reasons.push({
-      code: "INSUFFICIENT_ASSURANCE",
+      code: "oap.assurance_insufficient",
       message: `Required assurance level ${requiredLevel} not met`,
       severity: "error",
     });

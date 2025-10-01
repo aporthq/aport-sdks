@@ -52,7 +52,7 @@ interface Env {
  *         agent_id:
  *           type: string
  *           description: Agent ID to update
- *           example: "aeebc92d-13fb-4e23-8c3c-1aa82b167da6"
+ *           example: "ap_128094d3"
  *         status:
  *           type: string
  *           enum: [active, suspended]
@@ -92,7 +92,7 @@ interface Env {
  *         agent_id:
  *           type: string
  *           description: Agent ID
- *           example: "aeebc92d-13fb-4e23-8c3c-1aa82b167da6"
+ *           example: "ap_128094d3"
  *         status:
  *           type: string
  *           description: New status

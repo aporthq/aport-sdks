@@ -16,7 +16,7 @@ import { KVNamespace, PagesFunction } from "@cloudflare/workers-types";
  *         agent_id:
  *           type: string
  *           description: Unique identifier for the AI agent
- *           example: "aeebc92d-13fb-4e23-8c3c-1aa82b167da6"
+ *           example: "ap_128094d3"
  *         status:
  *           type: string
  *           enum: [active, suspended, revoked]
@@ -51,7 +51,7 @@ import { KVNamespace, PagesFunction } from "@cloudflare/workers-types";
  *             $ref: '#/components/schemas/AgentListItem'
  *           description: List of all registered agents
  *           example:
- *             - agent_id: "aeebc92d-13fb-4e23-8c3c-1aa82b167da6"
+ *             - agent_id: "ap_128094d3"
  *               status: "active"
  *               owner: "Acme Corp"
  *               role: "Tier-1"
@@ -96,7 +96,7 @@ interface AgentListItem {
  *               $ref: '#/components/schemas/AgentListResponse'
  *             example:
  *               agents:
- *                 - agent_id: "aeebc92d-13fb-4e23-8c3c-1aa82b167da6"
+ *                 - agent_id: "ap_128094d3"
  *                   status: "active"
  *                   owner: "Acme Corp"
  *                   role: "Tier-1"

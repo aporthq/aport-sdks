@@ -18,7 +18,7 @@
  *         schema:
  *           type: string
  *           pattern: "^ap_[a-zA-Z0-9]+$"
- *           example: "aeebc92d-13fb-4e23-8c3c-1aa82b167da6"
+ *           example: "ap_128094d3"
  *     requestBody:
  *       required: true
  *       content:
@@ -34,7 +34,7 @@
  *                 type: string
  *                 description: The agent passport ID (must match path parameter)
  *                 pattern: "^ap_[a-zA-Z0-9]+$"
- *                 example: "aeebc92d-13fb-4e23-8c3c-1aa82b167da6"
+ *                 example: "ap_128094d3"
  *               owner_id:
  *                 type: string
  *                 description: The owner ID of the passport
@@ -147,7 +147,7 @@
  *               $ref: '#/components/schemas/ErrorResponse'
  *             example:
  *               error: "not_found"
- *               message: "Passport with ID aeebc92d-13fb-4e23-8c3c-1aa82b167da6 not found"
+ *               message: "Passport with ID ap_128094d3 not found"
  *       409:
  *         description: Conflict - invalid status transition
  *         content:
@@ -370,6 +370,9 @@ export const onRequestPut = async ({
       return response.badRequest(validation.error!, undefined, { requestId });
     }
 
+    // Capture skipped fields for response
+    const skippedFields = validation.skippedFields;
+
     // Check resource access
     const resourceCheck = canAccessResource(authResult.user!, {
       resourceOwnerId: ownerId,
@@ -399,10 +402,14 @@ export const onRequestPut = async ({
     // For now, always use default KV to ensure consistency with other endpoints
     const kv = env.ai_passport_registry;
 
-    // Create TenantDO client
+    // Create TenantDO client with multi-region/multi-tenant bindings
     const tenantDO = createTenantDOClientFromEnv(env, ownerId, {
       timeout: 10000,
       maxRetries: 3,
+      kv: bindings.kv || env.ai_passport_registry,
+      r2: bindings.r2 || env.PASSPORT_SNAPSHOTS_BUCKET,
+      region: tenant.region || env.DEFAULT_REGION || "US",
+      version: env.AP_VERSION || "1.0.0",
     });
 
     // Initialize tenant with region-specific bindings
@@ -443,7 +450,7 @@ export const onRequestPut = async ({
     // Get previous hash for audit chain
     const prevHash = await getLastActionHash(kv, agent_id);
 
-    // Change status through TenantDO
+    // Change status through TenantDO (now handles storage fallback automatically)
     const result = await tenantDO.changeStatus(
       agent_id,
       body.status,
@@ -516,14 +523,22 @@ export const onRequestPut = async ({
     }
 
     // Return success response
-    return response.success(
-      {
-        success: true,
-        audit_id: completedAuditAction.id,
-      },
-      200,
-      "Status updated successfully"
-    );
+    const responseData: any = {
+      success: true,
+      audit_id: completedAuditAction.id,
+    };
+
+    // Include skipped fields information if any
+    if (skippedFields && skippedFields.length > 0) {
+      responseData.skipped_fields = skippedFields;
+      responseData.message = `Status updated successfully. Skipped restricted fields: ${skippedFields.join(
+        ", "
+      )}`;
+    } else {
+      responseData.message = "Status updated successfully";
+    }
+
+    return response.success(responseData, 200, responseData.message);
   } catch (error) {
     console.log("Status change failed", {
       error: error instanceof Error ? error.message : "Unknown error",
@@ -554,7 +569,7 @@ async function validateStatusChangeRequest(
   agent_id: string,
   isAdmin: boolean = false,
   currentPassport?: any
-): Promise<{ valid: boolean; error?: string }> {
+): Promise<{ valid: boolean; error?: string; skippedFields?: string[] }> {
   // agent_id is now provided in URL path, not required in body
 
   if (!body.owner_id) {
@@ -578,6 +593,19 @@ async function validateStatusChangeRequest(
   // Validate status value using ValidationUtils
   if (!ValidationUtils.validateStatus(body.status)) {
     return { valid: false, error: ERROR_MESSAGES.INVALID_STATUS };
+  }
+
+  // Handle admin-only fields gracefully (skip if not admin)
+  const skippedFields: string[] = [];
+
+  if (body.admin_notes && !isAdmin) {
+    skippedFields.push("admin_notes");
+    delete body.admin_notes;
+  }
+
+  if (body.force_status_change && !isAdmin) {
+    skippedFields.push("force_status_change");
+    delete body.force_status_change;
   }
 
   // Validate status transitions (admin-only for certain transitions)
@@ -611,7 +639,10 @@ async function validateStatusChangeRequest(
     }
   }
 
-  return { valid: true };
+  return {
+    valid: true,
+    skippedFields: skippedFields.length > 0 ? skippedFields : undefined,
+  };
 }
 
 async function getCurrentPassport(

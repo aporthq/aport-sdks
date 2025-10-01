@@ -18,7 +18,7 @@ app.use(express.json());
 // YOUR EXISTING AGENT ID
 // ============================================================================
 
-const AGENT_ID = "agents/aeebc92d-13fb-4e23-8c3c-1aa82b167da6"; // Your existing agent ID
+const AGENT_ID = "agents/ap_128094d3"; // Your existing agent ID
 
 // ============================================================================
 // SIMPLE APPROACH: CONVENIENCE FUNCTIONS

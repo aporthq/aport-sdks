@@ -16,7 +16,7 @@ app.use(express.json());
 // ============================================================================
 
 // Your existing agent ID
-const AGENT_ID = "agents/aeebc92d-13fb-4e23-8c3c-1aa82b167da6";
+const AGENT_ID = "agents/ap_128094d3";
 
 // ============================================================================
 // STEP 2: UNDERSTAND THE FLOW (2 minutes)
@@ -186,9 +186,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log("\n📋 HOW TO USE YOUR EXISTING AGENT ID:");
-  console.log(
-    "1. You already have an agent ID: agents/aeebc92d-13fb-4e23-8c3c-1aa82b167da6"
-  );
+  console.log("1. You already have an agent ID: agents/ap_128094d3");
   console.log("2. Pass it explicitly to the middleware (no headers needed)");
   console.log(
     "3. The middleware will automatically verify and enforce policies"
@@ -229,7 +227,7 @@ app.listen(PORT, () => {
 /**
  * What you get:
  *
- * ✅ Use your existing agent ID: "agents/aeebc92d-13fb-4e23-8c3c-1aa82b167da6"
+ * ✅ Use your existing agent ID: "agents/ap_128094d3"
  * ✅ Automatic agent ID extraction from headers
  * ✅ Policy verification against Agent Passport API
  * ✅ Context-specific validation (amounts, limits, regions, etc.)
@@ -239,9 +237,9 @@ app.listen(PORT, () => {
  * ✅ Zero manual verification code
  *
  * Agent ID Headers Supported:
- * - X-Agent-Passport-Id: agents/aeebc92d-13fb-4e23-8c3c-1aa82b167da6 (preferred)
- * - X-Agent-ID: agents/aeebc92d-13fb-4e23-8c3c-1aa82b167da6 (fallback)
- * - Authorization: Bearer agents/aeebc92d-13fb-4e23-8c3c-1aa82b167da6 (fallback)
+ * - X-Agent-Passport-Id: agents/ap_128094d3 (preferred)
+ * - X-Agent-ID: agents/ap_128094d3 (fallback)
+ * - Authorization: Bearer agents/ap_128094d3 (fallback)
  *
  * Context Validation:
  * - Amount limits (payments.refund.v1)

@@ -34,7 +34,7 @@ describe("agentPassportMiddleware", () => {
 
   it("should verify agent passport and attach to request", async () => {
     const mockAgent: AgentPassport = {
-      agent_id: "aeebc92d-13fb-4e23-8c3c-1aa82b167da64567890abcdef",
+      agent_id: "ap_128094d34567890abcdef",
       slug: "test-agent",
       name: "Test Agent",
       owner: "test-owner",
@@ -69,17 +69,12 @@ describe("agentPassportMiddleware", () => {
 
     const response = await request(app)
       .get("/test")
-      .set(
-        "X-Agent-Passport-Id",
-        "aeebc92d-13fb-4e23-8c3c-1aa82b167da64567890abcdef"
-      );
+      .set("X-Agent-Passport-Id", "ap_128094d34567890abcdef");
 
     expect(response.status).toBe(200);
     expect(response.body.agent).toEqual(mockAgent);
     expect(mockFetch).toHaveBeenCalledWith(
-      expect.stringContaining(
-        "/api/verify/aeebc92d-13fb-4e23-8c3c-1aa82b167da64567890abcdef"
-      ),
+      expect.stringContaining("/api/verify/ap_128094d34567890abcdef"),
       expect.objectContaining({
         headers: expect.objectContaining({
           "Cache-Control": "public, max-age=60",
@@ -130,7 +125,7 @@ describe("agentPassportMiddleware", () => {
 
   it("should check required permissions", async () => {
     const mockAgent: AgentPassport = {
-      agent_id: "aeebc92d-13fb-4e23-8c3c-1aa82b167da64567890abcdef",
+      agent_id: "ap_128094d34567890abcdef",
       slug: "test-agent",
       name: "Test Agent",
       owner: "test-owner",
@@ -167,10 +162,7 @@ describe("agentPassportMiddleware", () => {
 
     const response = await request(app)
       .get("/test")
-      .set(
-        "X-Agent-Passport-Id",
-        "aeebc92d-13fb-4e23-8c3c-1aa82b167da64567890abcdef"
-      );
+      .set("X-Agent-Passport-Id", "ap_128094d34567890abcdef");
 
     expect(response.status).toBe(403);
     expect(response.body.error).toBe("insufficient_permissions");
@@ -178,7 +170,7 @@ describe("agentPassportMiddleware", () => {
 
   it("should check allowed regions", async () => {
     const mockAgent: AgentPassport = {
-      agent_id: "aeebc92d-13fb-4e23-8c3c-1aa82b167da64567890abcdef",
+      agent_id: "ap_128094d34567890abcdef",
       slug: "test-agent",
       name: "Test Agent",
       owner: "test-owner",
@@ -215,10 +207,7 @@ describe("agentPassportMiddleware", () => {
 
     const response = await request(app)
       .get("/test")
-      .set(
-        "X-Agent-Passport-Id",
-        "aeebc92d-13fb-4e23-8c3c-1aa82b167da64567890abcdef"
-      );
+      .set("X-Agent-Passport-Id", "ap_128094d34567890abcdef");
 
     expect(response.status).toBe(403);
     expect(response.body.error).toBe("region_not_allowed");
@@ -245,7 +234,7 @@ describe("Helper Functions", () => {
 
   beforeEach(() => {
     mockAgent = {
-      agent_id: "aeebc92d-13fb-4e23-8c3c-1aa82b167da64567890abcdef",
+      agent_id: "ap_128094d34567890abcdef",
       slug: "test-agent",
       name: "Test Agent",
       owner: "test-owner",

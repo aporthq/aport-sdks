@@ -30,7 +30,7 @@ This directory contains working examples showing how to integrate Agent Passport
 
 ## 🚀 Quick Start (5 minutes)
 
-If you already have an agent ID (e.g., `agents/aeebc92d-13fb-4e23-8c3c-1aa82b167da6`):
+If you already have an agent ID (e.g., `agents/ap_128094d3`):
 
 ```bash
 # 1. Install dependencies
@@ -42,7 +42,7 @@ python sdk_based_example.py
 # 3. Test the endpoints
 curl -X GET 'http://localhost:8000/'  # Public endpoint
 curl -X GET 'http://localhost:8000/protected' \
-  -H 'X-Agent-Passport-Id: agents/aeebc92d-13fb-4e23-8c3c-1aa82b167da6'  # Protected endpoint
+  -H 'X-Agent-Passport-Id: agents/ap_128094d3'  # Protected endpoint
 ```
 
 ## 🔄 How It Works
@@ -111,7 +111,7 @@ from agent_passport import (
 
 # Use SDK directly in any Python application
 client = AgentPassportClient()
-agent = await client.verify_agent_passport("agents/aeebc92d-13fb-4e23-8c3c-1aa82b167da6")
+agent = await client.verify_agent_passport("agents/ap_128094d3")
 
 # Check requirements
 assurance_config = AssuranceEnforcementConfig()
@@ -186,14 +186,14 @@ app.add_middleware(AgentPassportMiddleware, options=middleware_options)
 ### Test with valid agent ID:
 ```bash
 curl -X GET 'http://localhost:8000/protected' \
-  -H 'X-Agent-Passport-Id: agents/aeebc92d-13fb-4e23-8c3c-1aa82b167da6'
+  -H 'X-Agent-Passport-Id: agents/ap_128094d3'
 ```
 
 ### Test with POST data:
 ```bash
 curl -X POST 'http://localhost:8000/api/refunds' \
   -H 'Content-Type: application/json' \
-  -H 'X-Agent-Passport-Id: agents/aeebc92d-13fb-4e23-8c3c-1aa82b167da6' \
+  -H 'X-Agent-Passport-Id: agents/ap_128094d3' \
   -d '{"amount": 25.00, "currency": "USD"}'
 ```
 

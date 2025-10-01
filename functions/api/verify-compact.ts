@@ -19,7 +19,7 @@ import { KVNamespace, PagesFunction } from "@cloudflare/workers-types";
  *         id:
  *           type: string
  *           description: Unique identifier for the AI agent
- *           example: "aeebc92d-13fb-4e23-8c3c-1aa82b167da6"
+ *           example: "ap_128094d3"
  *         owner:
  *           type: string
  *           description: Organization or individual who owns the agent
@@ -93,7 +93,7 @@ interface CompactPassport {
  *         description: Unique identifier for the AI agent
  *         schema:
  *           type: string
- *           example: "aeebc92d-13fb-4e23-8c3c-1aa82b167da6"
+ *           example: "ap_128094d3"
  *     responses:
  *       200:
  *         description: Agent passport found and verified (compact format)
@@ -102,7 +102,7 @@ interface CompactPassport {
  *             schema:
  *               $ref: '#/components/schemas/CompactPassport'
  *             example:
- *               id: "aeebc92d-13fb-4e23-8c3c-1aa82b167da6"
+ *               id: "ap_128094d3"
  *               owner: "Acme Corp"
  *               role: "Tier-1"
  *               status: "active"

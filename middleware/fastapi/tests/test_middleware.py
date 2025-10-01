@@ -25,7 +25,7 @@ class TestAgentPassportMiddleware:
         """Set up test fixtures."""
         self.app = FastAPI()
         self.mock_agent = AgentPassport(
-            agent_id='aeebc92d-13fb-4e23-8c3c-1aa82b167da64567890abcdef',
+            agent_id='ap_128094d34567890abcdef',
             slug='test-agent',
             name='Test Agent',
             owner='test-owner',
@@ -62,11 +62,11 @@ class TestAgentPassportMiddleware:
         self.app.add_middleware(AgentPassportMiddleware, options=options)
         
         client = TestClient(self.app)
-        response = client.get('/test', headers={'X-Agent-Passport-Id': 'aeebc92d-13fb-4e23-8c3c-1aa82b167da64567890abcdef'})
+        response = client.get('/test', headers={'X-Agent-Passport-Id': 'ap_128094d34567890abcdef'})
         
         assert response.status_code == 200
-        assert response.json()['agent_id'] == 'aeebc92d-13fb-4e23-8c3c-1aa82b167da64567890abcdef'
-        mock_client.verify_agent_passport.assert_called_once_with('aeebc92d-13fb-4e23-8c3c-1aa82b167da64567890abcdef')
+        assert response.json()['agent_id'] == 'ap_128094d34567890abcdef'
+        mock_client.verify_agent_passport.assert_called_once_with('ap_128094d34567890abcdef')
     
     @patch('agent_passport_middleware.middleware.AgentPassportClient')
     def test_middleware_returns_400_when_agent_id_missing_and_fail_closed_true(self, mock_client_class):
@@ -172,7 +172,7 @@ class TestAgentPassportMiddleware:
         self.app.add_middleware(AgentPassportMiddleware, options=options)
         
         client = TestClient(self.app)
-        response = client.get('/test', headers={'X-Agent-Passport-Id': 'aeebc92d-13fb-4e23-8c3c-1aa82b167da64567890abcdef'})
+        response = client.get('/test', headers={'X-Agent-Passport-Id': 'ap_128094d34567890abcdef'})
         
         assert response.status_code == 403
         assert response.json()['error'] == 'insufficient_permissions'
@@ -195,7 +195,7 @@ class TestAgentPassportMiddleware:
         self.app.add_middleware(AgentPassportMiddleware, options=options)
         
         client = TestClient(self.app)
-        response = client.get('/test', headers={'X-Agent-Passport-Id': 'aeebc92d-13fb-4e23-8c3c-1aa82b167da64567890abcdef'})
+        response = client.get('/test', headers={'X-Agent-Passport-Id': 'ap_128094d34567890abcdef'})
         
         assert response.status_code == 403
         assert response.json()['error'] == 'region_not_allowed'
@@ -231,7 +231,7 @@ class TestHelperFunctions:
     def setup_method(self):
         """Set up test fixtures."""
         self.mock_agent = AgentPassport(
-            agent_id='aeebc92d-13fb-4e23-8c3c-1aa82b167da64567890abcdef',
+            agent_id='ap_128094d34567890abcdef',
             slug='test-agent',
             name='Test Agent',
             owner='test-owner',

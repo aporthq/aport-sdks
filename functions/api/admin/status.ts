@@ -34,7 +34,7 @@ import { PassportData } from "../../../types/passport";
  *         agent_id:
  *           type: string
  *           description: Agent ID to update
- *           example: "aeebc92d-13fb-4e23-8c3c-1aa82b167da6"
+ *           example: "ap_128094d3"
  *         status:
  *           type: string
  *           enum: [draft, active, suspended, revoked]
@@ -59,7 +59,7 @@ import { PassportData } from "../../../types/passport";
  *         agent_id:
  *           type: string
  *           description: Updated agent ID
- *           example: "aeebc92d-13fb-4e23-8c3c-1aa82b167da6"
+ *           example: "ap_128094d3"
  *         status:
  *           type: string
  *           description: New status
@@ -101,7 +101,7 @@ interface UpdateStatusRequest {
  *           schema:
  *             $ref: '#/components/schemas/UpdateStatusRequest'
  *           example:
- *             agent_id: "aeebc92d-13fb-4e23-8c3c-1aa82b167da6"
+ *             agent_id: "ap_128094d3"
  *             status: "suspended"
  *     responses:
  *       200:
@@ -113,7 +113,7 @@ interface UpdateStatusRequest {
  *             example:
  *               ok: true
  *               message: "Agent status updated successfully"
- *               agent_id: "aeebc92d-13fb-4e23-8c3c-1aa82b167da6"
+ *               agent_id: "ap_128094d3"
  *               status: "suspended"
  *       400:
  *         description: Invalid request data

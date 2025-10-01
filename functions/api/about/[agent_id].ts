@@ -24,7 +24,7 @@ interface Env {
  *         description: The agent passport ID
  *         schema:
  *           type: string
- *           example: "aeebc92d-13fb-4e23-8c3c-1aa82b167da6"
+ *           example: "ap_128094d3"
  *     responses:
  *       200:
  *         description: Agent passport Agent Passport page data
@@ -35,7 +35,7 @@ interface Env {
  *               properties:
  *                 agent_id:
  *                   type: string
- *                   example: "aeebc92d-13fb-4e23-8c3c-1aa82b167da6"
+ *                   example: "ap_128094d3"
  *                 name:
  *                   type: string
  *                   example: "Customer Support Bot"
@@ -66,7 +66,7 @@ interface Env {
  *                   example: "2024-01-15T10:30:00Z"
  *                 badge_url:
  *                   type: string
- *                   example: "https://aport.io/badge/aeebc92d-13fb-4e23-8c3c-1aa82b167da6.svg"
+ *                   example: "https://aport.io/badge/ap_128094d3.svg"
  *       404:
  *         description: Agent passport not found
  *         content:

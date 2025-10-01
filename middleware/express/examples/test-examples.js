@@ -22,7 +22,7 @@ async function testStandardExample() {
 
   const headers = {
     "Content-Type": "application/json",
-    "x-agent-passport-id": "agents/aeebc92d-13fb-4e23-8c3c-1aa82b167da6",
+    "x-agent-passport-id": "agents/ap_128094d3",
   };
 
   // Test refunds endpoint (no agent ID header needed - it's explicit in middleware)

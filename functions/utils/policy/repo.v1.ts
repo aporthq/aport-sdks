@@ -26,7 +26,7 @@ export async function evaluateRepoV1(
       allow: false,
       reasons: [
         {
-          code: "AGENT_SUSPENDED",
+          code: "oap.passport_suspended",
           message: `Agent is ${passport.status} and cannot perform operations`,
           severity: "error",
         },
@@ -48,7 +48,7 @@ export async function evaluateRepoV1(
     if (!hasCapability) {
       allow = false;
       reasons.push({
-        code: "INSUFFICIENT_CAPABILITIES",
+        code: "oap.unknown_capability",
         message: `Missing required capability: ${capability}`,
         severity: "error",
       });
@@ -56,7 +56,10 @@ export async function evaluateRepoV1(
   }
 
   // 2. Check PR limits (max PRs per day)
-  const maxPRsPerDay = passport.limits?.max_prs_per_day ?? 5;
+  const maxPRsPerDay =
+    passport.limits?.repo?.max_prs_per_day ??
+    passport.limits?.max_prs_per_day ??
+    5;
   const today = new Date().toISOString().substring(0, 10);
   const prKey = `prs:${passport.agent_id}:${today}`;
 
@@ -64,7 +67,7 @@ export async function evaluateRepoV1(
   if (context.operation === "create_pr" && prCount >= maxPRsPerDay) {
     allow = false;
     reasons.push({
-      code: "PR_LIMIT_EXCEEDED",
+      code: "oap.limit_exceeded",
       message: `Daily PR limit exceeded: ${prCount}/${maxPRsPerDay}`,
       severity: "error",
     });
@@ -73,14 +76,17 @@ export async function evaluateRepoV1(
   }
 
   // 3. Check merge limits (max merges per day)
-  const maxMergesPerDay = passport.limits?.max_merges_per_day ?? 10;
+  const maxMergesPerDay =
+    passport.limits?.repo?.max_merges_per_day ??
+    passport.limits?.max_merges_per_day ??
+    10;
   const mergeKey = `merges:${passport.agent_id}:${today}`;
 
   const mergeCount = await getCurrentCount(env, mergeKey);
   if (context.operation === "merge" && mergeCount >= maxMergesPerDay) {
     allow = false;
     reasons.push({
-      code: "MERGE_LIMIT_EXCEEDED",
+      code: "oap.limit_exceeded",
       message: `Daily merge limit exceeded: ${mergeCount}/${maxMergesPerDay}`,
       severity: "error",
     });
@@ -89,11 +95,14 @@ export async function evaluateRepoV1(
   }
 
   // 4. Check PR size limits
-  const maxPRSizeKB = passport.limits?.max_pr_size_kb ?? 1000;
+  const maxPRSizeKB =
+    passport.limits?.repo?.max_pr_size_kb ??
+    passport.limits?.max_pr_size_kb ??
+    1000;
   if (context.pr_size_kb && context.pr_size_kb > maxPRSizeKB) {
     allow = false;
     reasons.push({
-      code: "PR_SIZE_LIMIT_EXCEEDED",
+      code: "oap.limit_exceeded",
       message: `PR size ${context.pr_size_kb}KB exceeds limit of ${maxPRSizeKB}KB`,
       severity: "error",
     });
@@ -108,7 +117,7 @@ export async function evaluateRepoV1(
   ) {
     allow = false;
     reasons.push({
-      code: "REPOSITORY_NOT_ALLOWED",
+      code: "oap.repository_forbidden",
       message: `Repository ${context.repository} is not allowed`,
       severity: "error",
     });
@@ -122,7 +131,7 @@ export async function evaluateRepoV1(
   if (context.base_branch && !allowedBranches.includes(context.base_branch)) {
     allow = false;
     reasons.push({
-      code: "BASE_BRANCH_NOT_ALLOWED",
+      code: "oap.branch_forbidden",
       message: `Base branch ${context.base_branch} is not allowed`,
       severity: "error",
     });
@@ -141,7 +150,7 @@ export async function evaluateRepoV1(
     if (invalidPaths.length > 0) {
       allow = false;
       reasons.push({
-        code: "PATH_NOT_ALLOWED",
+        code: "oap.path_forbidden",
         message: `File paths not allowed: ${invalidPaths.join(", ")}`,
         severity: "error",
       });
@@ -152,7 +161,7 @@ export async function evaluateRepoV1(
   if (context.github_actor && !context.github_actor.startsWith("agent-")) {
     allow = false;
     reasons.push({
-      code: "INVALID_GITHUB_ACTOR",
+      code: "oap.actor_invalid",
       message: "GitHub actor must be an agent",
       severity: "error",
     });
@@ -163,7 +172,7 @@ export async function evaluateRepoV1(
   if (!meetsMinimumAssurance(agentAssurance, "L2")) {
     allow = false;
     reasons.push({
-      code: "INSUFFICIENT_ASSURANCE",
+      code: "oap.assurance_insufficient",
       message: `Required assurance level L2 not met (current: ${agentAssurance})`,
       severity: "error",
     });

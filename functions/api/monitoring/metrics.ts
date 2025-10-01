@@ -74,7 +74,7 @@ interface Env {
  *                 properties:
  *                   agent_id:
  *                     type: string
- *                     example: "aeebc92d-13fb-4e23-8c3c-1aa82b167da6"
+ *                     example: "ap_128094d3"
  *                   requests:
  *                     type: number
  *                     example: 1000

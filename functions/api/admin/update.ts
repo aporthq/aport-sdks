@@ -40,7 +40,7 @@ import {
  *         agent_id:
  *           type: string
  *           description: Agent ID to update
- *           example: "aeebc92d-13fb-4e23-8c3c-1aa82b167da6"
+ *           example: "ap_128094d3"
  *         name:
  *           type: string
  *           description: Updated agent name
@@ -123,7 +123,7 @@ import {
  *         agent_id:
  *           type: string
  *           description: Updated agent ID
- *           example: "aeebc92d-13fb-4e23-8c3c-1aa82b167da6"
+ *           example: "ap_128094d3"
  */
 
 interface Env {
@@ -244,7 +244,7 @@ async function updateIndexes(
  *           schema:
  *             $ref: '#/components/schemas/PassportData'
  *           example:
- *             agent_id: "aeebc92d-13fb-4e23-8c3c-1aa82b167da6"
+ *             agent_id: "ap_128094d3"
  *             name: "Updated Agent Name"
  *             role: "Tier-2"
  *             description: "Updated description"
@@ -259,7 +259,7 @@ async function updateIndexes(
  *             example:
  *               ok: true
  *               message: "Agent passport updated successfully"
- *               agent_id: "aeebc92d-13fb-4e23-8c3c-1aa82b167da6"
+ *               agent_id: "ap_128094d3"
  *       400:
  *         description: Invalid request data
  *         content:

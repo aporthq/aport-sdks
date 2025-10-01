@@ -38,6 +38,7 @@ export const onRequestGet: PagesFunction<Env> = async ({
     }
 
     const ownerId = params.owner_id as string;
+    console.log("Owner ID:", ownerId);
 
     // Validate owner ID format
     if (!ownerId.startsWith("ap_org_") && !ownerId.startsWith("ap_user_")) {
