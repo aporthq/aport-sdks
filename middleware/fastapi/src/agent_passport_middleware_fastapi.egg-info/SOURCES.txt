@@ -1,0 +1,17 @@
+LICENSE
+README.md
+pyproject.toml
+src/agent_passport_middleware/__init__.py
+src/agent_passport_middleware/middleware.py
+src/agent_passport_middleware/middleware_simple.py
+src/agent_passport_middleware/middleware_v2.py
+src/agent_passport_middleware/middleware_v3.py
+src/agent_passport_middleware/policy_enforcement_v2.py
+src/agent_passport_middleware/types.py
+src/agent_passport_middleware/validation.py
+src/agent_passport_middleware_fastapi.egg-info/PKG-INFO
+src/agent_passport_middleware_fastapi.egg-info/SOURCES.txt
+src/agent_passport_middleware_fastapi.egg-info/dependency_links.txt
+src/agent_passport_middleware_fastapi.egg-info/requires.txt
+src/agent_passport_middleware_fastapi.egg-info/top_level.txt
+tests/test_middleware.py

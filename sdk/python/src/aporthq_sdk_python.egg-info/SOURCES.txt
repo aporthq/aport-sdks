@@ -1,0 +1,15 @@
+LICENSE
+README.md
+pyproject.toml
+src/agent_passport/__init__.py
+src/agent_passport/decision_types.py
+src/agent_passport/errors.py
+src/agent_passport/exceptions.py
+src/agent_passport/shared_types.py
+src/agent_passport/thin_client.py
+src/aporthq_sdk_python.egg-info/PKG-INFO
+src/aporthq_sdk_python.egg-info/SOURCES.txt
+src/aporthq_sdk_python.egg-info/dependency_links.txt
+src/aporthq_sdk_python.egg-info/requires.txt
+src/aporthq_sdk_python.egg-info/top_level.txt
+tests/test_thin_client.py

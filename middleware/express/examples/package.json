@@ -1,0 +1,32 @@
+{
+  "name": "agent-passport-express-examples",
+  "version": "1.0.0",
+  "description": "Simple examples for Agent Passport Express middleware",
+  "main": "simple-example.js",
+  "scripts": {
+    "start": "node simple-example.js",
+    "start:ts": "ts-node typescript-example.ts",
+    "dev": "nodemon simple-example.js",
+    "dev:ts": "nodemon --exec ts-node typescript-example.ts"
+  },
+  "dependencies": {
+    "@agent-passport/middleware-express": "file:../",
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.17",
+    "@types/node": "^20.0.0",
+    "nodemon": "^3.0.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.0.0"
+  },
+  "keywords": [
+    "agent-passport",
+    "express",
+    "middleware",
+    "policy",
+    "enforcement"
+  ],
+  "author": "Agent Passport Team",
+  "license": "MIT"
+}
