@@ -1,0 +1,294 @@
+Metadata-Version: 2.4
+Name: agent-passport-sdk
+Version: 0.1.0
+Summary: Python SDK for The Passport for AI Agents
+Author-email: The Passport for AI Agents <dev@agent-passport.com>
+License: MIT
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+Requires-Dist: requests>=2.28.0
+Requires-Dist: typing-extensions>=4.0.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.0.0; extra == "dev"
+Requires-Dist: black>=22.0.0; extra == "dev"
+Requires-Dist: isort>=5.0.0; extra == "dev"
+Requires-Dist: mypy>=1.0.0; extra == "dev"
+
+# Agent Passport SDK - Python
+
+Python SDK for The Passport for AI Agents, providing easy integration with agent authentication and verification.
+
+## Installation
+
+```bash
+pip install agent-passport-sdk
+```
+
+## Quick Start
+
+### Basic Usage
+
+```python
+from agent_passport import AgentPassportClient, agent_session
+
+# Create a client
+client = AgentPassportClient()
+
+# Verify an agent passport
+agent = client.verify_agent_passport('ap_1234567890abcdef')
+
+# Check permissions
+if client.has_permission(agent, 'read:data'):
+    print('Agent can read data')
+
+# Check regional access
+if client.is_allowed_in_region(agent, 'us-east-1'):
+    print('Agent is allowed in us-east-1')
+```
+
+### Session Usage
+
+```python
+from agent_passport import agent_session
+
+# Use agent session for automatic header injection
+with agent_session('ap_1234567890abcdef') as session:
+    response = session.get('https://api.example.com/data')
+    data = response.json()
+```
+
+### Environment Variable Usage
+
+```python
+import os
+from agent_passport import agent_session
+
+# Set environment variable
+os.environ['AGENT_PASSPORT_ID'] = 'ap_1234567890abcdef'
+
+# Use session from environment
+with agent_session() as session:
+    response = session.get('https://api.example.com/data')
+```
+
+## API Reference
+
+### `AgentPassportClient`
+
+Main client for interacting with the Agent Passport Registry.
+
+#### `__init__(base_url=None, timeout=5, cache=True)`
+
+Initialize the client.
+
+**Parameters:**
+- `base_url` (str, optional): Base URL of the passport registry
+- `timeout` (int): Request timeout in seconds (default: 5)
+- `cache` (bool): Enable caching (default: True)
+
+#### `verify_agent_passport(agent_id, options=None)`
+
+Verify an agent passport ID against the registry.
+
+**Parameters:**
+- `agent_id` (str): The agent passport ID to verify
+- `options` (VerificationOptions, optional): Verification options
+
+**Returns:** `AgentPassport` object
+
+**Raises:** `AgentPassportError` if verification fails
+
+#### `has_permission(agent, permission)`
+
+Check if an agent has a specific permission.
+
+**Parameters:**
+- `agent` (AgentPassport): The agent passport data
+- `permission` (str): The permission to check
+
+**Returns:** `bool`
+
+#### `is_allowed_in_region(agent, region)`
+
+Check if an agent is allowed in a specific region.
+
+**Parameters:**
+- `agent` (AgentPassport): The agent passport data
+- `region` (str): The region to check
+
+**Returns:** `bool`
+
+#### `get_agent_passport_id()`
+
+Get the current agent passport ID from environment variables.
+
+**Returns:** `str` or `None`
+
+#### `clear_cache()`
+
+Clear the verification cache.
+
+### `agent_session(agent_id=None)`
+
+Create an agent session with automatic header injection.
+
+**Parameters:**
+- `agent_id` (str, optional): The agent passport ID (defaults to AGENT_PASSPORT_ID env var)
+
+**Returns:** `AgentSession` instance
+
+**Raises:** `AgentPassportError` if agent_id is not provided and not in environment
+
+### `AgentSession`
+
+A requests.Session with automatic Agent Passport header injection.
+
+#### Methods
+
+- `get(url, **kwargs)`: Make a GET request
+- `post(url, **kwargs)`: Make a POST request
+- `put(url, **kwargs)`: Make a PUT request
+- `patch(url, **kwargs)`: Make a PATCH request
+- `delete(url, **kwargs)`: Make a DELETE request
+- `request(method, url, **kwargs)`: Make a generic request
+
+## Error Handling
+
+The SDK raises `AgentPassportError` for various failure scenarios:
+
+```python
+from agent_passport import AgentPassportClient, AgentPassportError
+
+client = AgentPassportClient()
+
+try:
+    agent = client.verify_agent_passport('ap_invalid_id')
+except AgentPassportError as e:
+    print(f"Error code: {e.code}")
+    print(f"Status code: {e.status_code}")
+    print(f"Agent ID: {e.agent_id}")
+```
+
+## Configuration
+
+### Environment Variables
+
+- `AGENT_PASSPORT_ID`: The agent passport ID to use for requests
+- `AGENT_PASSPORT_BASE_URL`: Base URL of the passport registry
+
+### Custom Configuration
+
+```python
+from agent_passport import AgentPassportClient, VerificationOptions
+
+# Custom client configuration
+client = AgentPassportClient(
+    base_url='https://my-registry.com',
+    timeout=10,
+    cache=True
+)
+
+# Custom verification options
+options = VerificationOptions(
+    base_url='https://my-registry.com',
+    cache=True,
+    timeout=10
+)
+
+agent = client.verify_agent_passport('ap_1234567890abcdef', options)
+```
+
+## Examples
+
+### Express.js Middleware Equivalent
+
+```python
+from agent_passport import AgentPassportClient, AgentPassportError
+from flask import Flask, request, jsonify
+
+app = Flask(__name__)
+client = AgentPassportClient()
+
+@app.before_request
+def verify_agent():
+    agent_id = request.headers.get('X-Agent-Passport-Id')
+    if agent_id:
+        try:
+            agent = client.verify_agent_passport(agent_id)
+            request.agent = agent
+        except AgentPassportError as e:
+            return jsonify({'error': e.message}), e.status_code
+```
+
+### FastAPI Middleware Equivalent
+
+```python
+from agent_passport import AgentPassportClient, AgentPassportError
+from fastapi import FastAPI, Request, HTTPException
+
+app = FastAPI()
+client = AgentPassportClient()
+
+@app.middleware("http")
+async def verify_agent(request: Request, call_next):
+    agent_id = request.headers.get("x-agent-passport-id")
+    if agent_id:
+        try:
+            agent = client.verify_agent_passport(agent_id)
+            request.state.agent = agent
+        except AgentPassportError as e:
+            raise HTTPException(status_code=e.status_code, detail=e.message)
+    return await call_next(request)
+```
+
+### Background Job
+
+```python
+import os
+from agent_passport import agent_session
+
+# Set agent ID for background job
+os.environ['AGENT_PASSPORT_ID'] = 'ap_1234567890abcdef'
+
+def process_data():
+    with agent_session() as session:
+        response = session.get('https://api.example.com/data')
+        data = response.json()
+        # Process data...
+```
+
+## Development
+
+### Running Tests
+
+```bash
+pip install -e ".[dev]"
+pytest
+```
+
+### Code Formatting
+
+```bash
+black src/
+isort src/
+```
+
+### Type Checking
+
+```bash
+mypy src/
+```
+
+## License
+
+MIT

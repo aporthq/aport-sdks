@@ -1,0 +1,52 @@
+{
+  "name": "@aporthq/sdk-node",
+  "version": "0.1.0",
+  "description": "Node.js SDK for The Passport for AI Agents",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest src/thin-client.test.ts",
+    "dev": "tsc --watch",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "agent-passport",
+    "ai",
+    "authentication",
+    "verification",
+    "aport",
+    "mcp",
+    "middleware"
+  ],
+  "author": "APort Team <team@aport.io>",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "@types/node": "^20.0.0",
+    "jest": "^29.5.0",
+    "ts-jest": "^29.1.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aporthq/agent-passport.git",
+    "directory": "sdk/node"
+  },
+  "homepage": "https://aport.io",
+  "bugs": {
+    "url": "https://github.com/aporthq/agent-passport/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
