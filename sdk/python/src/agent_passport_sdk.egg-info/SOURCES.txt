@@ -1,0 +1,14 @@
+README.md
+pyproject.toml
+src/agent_passport/__init__.py
+src/agent_passport/client.py
+src/agent_passport/exceptions.py
+src/agent_passport/session.py
+src/agent_passport/types.py
+src/agent_passport_sdk.egg-info/PKG-INFO
+src/agent_passport_sdk.egg-info/SOURCES.txt
+src/agent_passport_sdk.egg-info/dependency_links.txt
+src/agent_passport_sdk.egg-info/requires.txt
+src/agent_passport_sdk.egg-info/top_level.txt
+tests/test_client.py
+tests/test_session.py

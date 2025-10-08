@@ -1,0 +1,330 @@
+name: Publish Packages from Target Repo
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      package:
+        description: "Package to publish"
+        required: true
+        type: choice
+        options:
+          - sdk-node
+          - sdk-python
+          - middleware-express
+          - middleware-fastapi
+          - all
+      version:
+        description: "Version to publish (e.g., 0.1.0)"
+        required: false
+        type: string
+
+jobs:
+  publish-sdk-node:
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && (github.event.inputs.package == 'sdk-node' || github.event.inputs.package == 'all'))
+    runs-on: ubuntu-latest
+    env:
+      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+          scope: "@aporthq"
+
+      - name: Check if Node SDK directory exists
+        run: |
+          if [ ! -d "sdk/node" ]; then
+            echo "❌ sdk/node directory not found"
+            echo "Available directories:"
+            ls -la
+            echo "Contents of current directory:"
+            find . -type d -name "*" | head -20
+            exit 1
+          else
+            echo "✅ sdk/node directory found"
+            ls -la sdk/node/
+          fi
+
+      - name: Install dependencies
+        run: |
+          cd sdk/node
+          npm ci
+
+      - name: Build
+        run: |
+          cd sdk/node
+          npm run build
+
+      - name: Run tests
+        run: |
+          cd sdk/node
+          npm test
+
+      - name: Publish to npm
+        run: |
+          cd sdk/node
+          npm publish
+
+  publish-sdk-python:
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && (github.event.inputs.package == 'sdk-python' || github.event.inputs.package == 'all'))
+    runs-on: ubuntu-latest
+    env:
+      TWINE_USERNAME: __token__
+      TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Check if Python SDK directory exists
+        run: |
+          if [ ! -d "sdk/python" ]; then
+            echo "❌ sdk/python directory not found"
+            echo "Available directories:"
+            ls -la
+            echo "Contents of current directory:"
+            find . -type d -name "*" | head -20
+            exit 1
+          else
+            echo "✅ sdk/python directory found"
+            ls -la sdk/python/
+          fi
+
+      - name: Install dependencies
+        run: |
+          cd sdk/python
+          pip install build twine pytest pytest-asyncio
+
+      - name: Build package
+        run: |
+          cd sdk/python
+          python -m build
+
+      - name: Run tests
+        run: |
+          cd sdk/python
+          pip install -e .
+          python -m pytest tests/ -v
+
+      - name: Publish to PyPI
+        run: |
+          cd sdk/python
+          python -m twine upload dist/*
+
+  publish-middleware-express:
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && (github.event.inputs.package == 'middleware-express' || github.event.inputs.package == 'all'))
+    needs: publish-sdk-node
+    runs-on: ubuntu-latest
+    env:
+      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+          scope: "@aporthq"
+
+      - name: Check if Express middleware directory exists
+        run: |
+          if [ ! -d "middleware/express" ]; then
+            echo "❌ middleware/express directory not found"
+            echo "Available directories:"
+            ls -la
+            echo "Contents of current directory:"
+            find . -type d -name "*" | head -20
+            exit 1
+          else
+            echo "✅ middleware/express directory found"
+            ls -la middleware/express/
+          fi
+
+      - name: Install dependencies
+        run: |
+          cd middleware/express
+          npm ci
+
+      - name: Debug directory structure
+        run: |
+          echo "Current directory structure:"
+          find . -name "package.json" | head -10
+          echo "Contents of middleware/express:"
+          ls -la middleware/express/
+          echo "Contents of sdk:"
+          ls -la sdk/
+
+      - name: Install local SDK
+        run: |
+          cd middleware/express
+          # Try different paths to find the SDK
+          if [ -f "../sdk/node/package.json" ]; then
+            echo "Installing from ../sdk/node"
+            npm install ../sdk/node
+          elif [ -f "../../sdk/node/package.json" ]; then
+            echo "Installing from ../../sdk/node"
+            npm install ../../sdk/node
+          else
+            echo "SDK not found, listing available directories:"
+            find . -name "package.json" -path "*/sdk/*"
+            exit 1
+          fi
+
+      - name: Build
+        run: |
+          cd middleware/express
+          npm run build
+
+      - name: Publish to npm
+        run: |
+          cd middleware/express
+          npm publish
+
+  publish-middleware-fastapi:
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && (github.event.inputs.package == 'middleware-fastapi' || github.event.inputs.package == 'all'))
+    needs: publish-sdk-python
+    runs-on: ubuntu-latest
+    env:
+      TWINE_USERNAME: __token__
+      TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Check if FastAPI middleware directory exists
+        run: |
+          if [ ! -d "middleware/fastapi" ]; then
+            echo "❌ middleware/fastapi directory not found"
+            echo "Available directories:"
+            ls -la
+            echo "Contents of current directory:"
+            find . -type d -name "*" | head -20
+            exit 1
+          else
+            echo "✅ middleware/fastapi directory found"
+            ls -la middleware/fastapi/
+          fi
+
+      - name: Install dependencies
+        run: |
+          cd middleware/fastapi
+          pip install build twine pytest pytest-asyncio
+
+      - name: Debug directory structure
+        run: |
+          echo "Current directory structure:"
+          find . -name "setup.py" | head -10
+          echo "Contents of middleware/fastapi:"
+          ls -la middleware/fastapi/
+          echo "Contents of sdk:"
+          ls -la sdk/
+
+      - name: Install local SDK
+        run: |
+          cd middleware/fastapi
+          # Try different paths to find the SDK
+          if [ -f "../sdk/python/setup.py" ]; then
+            echo "Installing from ../sdk/python"
+            pip install -e ../sdk/python
+          elif [ -f "../../sdk/python/setup.py" ]; then
+            echo "Installing from ../../sdk/python"
+            pip install -e ../../sdk/python
+          else
+            echo "SDK not found, listing available directories:"
+            find . -name "setup.py" -path "*/sdk/*"
+            exit 1
+          fi
+
+      - name: Build package
+        run: |
+          cd middleware/fastapi
+          python -m build
+
+      - name: Publish to PyPI
+        run: |
+          cd middleware/fastapi
+          python -m twine upload dist/*
+
+  create-release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs:
+      [
+        publish-sdk-node,
+        publish-sdk-python,
+        publish-middleware-express,
+        publish-middleware-fastapi,
+      ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: Release ${{ github.ref_name }}
+          body: |
+            ## What's New in ${{ github.ref_name }}
+
+            This release includes updates to all APort SDKs and middleware packages.
+
+            ### Packages Published
+            - **@aporthq/sdk-node** - Node.js SDK
+            - **aporthq-sdk-python** - Python SDK
+            - **@aporthq/middleware-express** - Express.js middleware
+            - **agent-passport-middleware-fastapi** - FastAPI middleware
+
+            ### Installation
+            ```bash
+            # Node.js
+            npm install @aporthq/sdk-node@${{ github.ref_name }}
+            npm install @aporthq/middleware-express@${{ github.ref_name }}
+
+            # Python
+            pip install aporthq-sdk-python==${{ github.ref_name }}
+            pip install agent-passport-middleware-fastapi==${{ github.ref_name }}
+            ```
+
+            ### Documentation
+            - [Node.js SDK](sdk/node/README.md)
+            - [Python SDK](sdk/python/README.md)
+            - [Express Middleware](middleware/express/README.md)
+            - [FastAPI Middleware](middleware/fastapi/README.md)
+
+            ---
+            *This release was automatically generated by the APort CI/CD pipeline.*
+          draft: false
+          prerelease: false

@@ -1,0 +1,160 @@
+// Owner model types for users and organizations
+
+export type CapabilityId =
+  | "finance.payment.refund"
+  | "payments.payout"
+  | "payments.charge"
+  | "finance.transaction"
+  | "finance.crypto.trade"
+  | "returns.process"
+  | "inventory.adjust"
+  | "data.export"
+  | "data.delete"
+  | "data.access"
+  | "data.report.ingest"
+  | "identity.manage_roles"
+  | "messaging.send"
+  | "crm.update"
+  | "repo.merge"
+  | "repo.pr.create"
+  | "infra.deploy"
+  | "governance.data.access"
+  | "governance.policy.enforce"
+  | "governance.audit"
+  | "governance.compliance"
+  | "governance.risk.assess"
+  | "governance.incident.response"
+  | "governance.data.retention"
+  | "governance.data.classification"
+  | "governance.access.review"
+  | "governance.policy.update"
+  | "governance.audit.log"
+  | "governance.compliance.report"
+  | "governance.risk.mitigate"
+  | "governance.incident.manage"
+  | "governance.data.anonymize"
+  | "governance.data.encrypt"
+  | "governance.access.revoke"
+  | "governance.policy.create"
+  | "governance.audit.export"
+  | "governance.compliance.verify"
+  | "governance.risk.assess"
+  | "governance.incident.escalate"
+  | "governance.data.backup"
+  | "governance.data.restore"
+  | "governance.access.grant"
+  | "governance.policy.delete"
+  | "governance.audit.retain"
+  | "governance.compliance.monitor"
+  | "governance.risk.accept"
+  | "governance.incident.resolve"
+  | "governance.data.export"
+  | "governance.data.import"
+  | "governance.access.modify"
+  | "governance.policy.approve"
+  | "governance.audit.archive"
+  | "governance.compliance.enforce"
+  | "governance.risk.transfer"
+  | "governance.incident.report"
+  | "governance.data.validate"
+  | "governance.data.transform"
+  | "governance.access.audit"
+  | "governance.policy.review"
+  | "governance.audit.analyze"
+  | "governance.compliance.assess"
+  | "governance.risk.control"
+  | "governance.incident.analyze"
+  | "governance.data.quality"
+  | "governance.data.lineage"
+  | "governance.access.control"
+  | "governance.policy.version"
+  | "governance.audit.trail"
+  | "governance.compliance.audit"
+  | "governance.risk.register"
+  | "governance.incident.track"
+  | "governance.data.catalog"
+  | "governance.data.dictionary"
+  | "governance.access.manage"
+  | "governance.policy.publish"
+  | "governance.audit.report"
+  | "governance.compliance.report"
+  | "governance.risk.report"
+  | "governance.incident.notify"
+  | "governance.data.discover"
+  | "governance.data.profile"
+  | "governance.access.provision"
+  | "governance.policy.distribute"
+  | "governance.audit.verify"
+  | "governance.compliance.verify"
+  | "governance.risk.verify"
+  | "governance.incident.verify"
+  | "governance.data.verify"
+  | "governance.data.authenticate"
+  | "governance.access.authenticate"
+  | "governance.policy.authenticate"
+  | "governance.audit.authenticate"
+  | "governance.compliance.authenticate"
+  | "governance.risk.authenticate"
+  | "governance.incident.authenticate"
+  | "governance.data.authorize"
+  | "governance.access.authorize"
+  | "governance.policy.authorize"
+  | "governance.audit.authorize"
+  | "governance.compliance.authorize"
+  | "governance.risk.authorize"
+  | "governance.incident.authorize"
+  | "governance.data.encrypt"
+  | "governance.access.encrypt"
+  | "governance.policy.encrypt"
+  | "governance.audit.encrypt"
+  | "governance.compliance.encrypt"
+  | "governance.risk.encrypt"
+  | "governance.incident.encrypt"
+  | "governance.data.decrypt"
+  | "governance.access.decrypt"
+  | "governance.policy.decrypt"
+  | "governance.audit.decrypt"
+  | "governance.compliance.decrypt"
+  | "governance.risk.decrypt"
+  | "governance.incident.decrypt"
+  | "governance.data.sign"
+  | "governance.access.sign"
+  | "governance.policy.sign"
+  | "governance.audit.sign"
+  | "governance.compliance.sign"
+  | "governance.risk.sign"
+  | "governance.incident.sign"
+  | "governance.data.verify"
+  | "governance.access.verify"
+  | "governance.policy.verify"
+  | "governance.audit.verify"
+  | "governance.compliance.verify"
+  | "governance.risk.verify"
+  | "governance.incident.verify";
+
+export interface Owner {
+  id: string;
+  type: "user" | "organization";
+  name: string;
+  email?: string;
+  capabilities: CapabilityId[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface User extends Owner {
+  type: "user";
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  avatar_url?: string;
+}
+
+export interface Organization extends Owner {
+  type: "organization";
+  domain?: string;
+  website?: string;
+  logo_url?: string;
+  members: string[]; // User IDs
+  admins: string[]; // User IDs
+}
