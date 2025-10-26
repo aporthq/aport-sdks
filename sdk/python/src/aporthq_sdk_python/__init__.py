@@ -6,7 +6,7 @@ easy integration with agent authentication and policy verification via API calls
 All policy logic, counters, and enforcement happen on the server side.
 """
 
-from .thin_client import APortClient, APortClientOptions, PolicyVerifier
+from .client import APortClient, APortClientOptions, PolicyVerifier
 from .decision_types import (
     Decision,
     DecisionReason,
