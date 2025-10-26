@@ -57,28 +57,26 @@ const enterpriseClient = new APortClient({
   apiKey: 'your-enterprise-key'
 });
 
-// Create a policy verifier for convenience
-const verifier = new PolicyVerifier(client);
-
-// Verify a refund policy with proper error handling
+// Generic policy verification - works with any policy
 try {
-  const decision = await verifier.verifyRefund(
+  const decision = await client.verifyPolicy(
     'your-agent-id',
+    'finance.payment.refund.v1', // Any policy from ./policies
     {
       amount: 1000,  // Amount in cents ($10.00)
       currency: 'USD',
       order_id: 'order_123',
       reason: 'defective'
     },
-    'unique-key-123' // idempotency key
+    'unique-key-123' // Optional idempotency key
   );
 
   if (decision.allow) {
-    console.log('✅ Refund approved!');
+    console.log('✅ Policy verification passed!');
     console.log(`Decision ID: ${decision.decision_id}`);
     console.log(`Assurance Level: ${decision.assurance_level}`);
   } else {
-    console.log('❌ Refund denied!');
+    console.log('❌ Policy verification failed!');
     decision.reasons?.forEach(reason => {
       console.log(`  - [${reason.severity}] ${reason.code}: ${reason.message}`);
     });

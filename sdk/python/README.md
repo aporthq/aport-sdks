@@ -47,28 +47,26 @@ async def main():
         api_key="your-enterprise-key"
     ))
 
-    # Create a policy verifier for convenience
-    verifier = PolicyVerifier(client)
-
-    # Verify a refund policy with proper error handling
+    # Generic policy verification - works with any policy
     try:
-        decision = await verifier.verify_refund(
-            "your-agent-id",
-            {
+        decision = await client.verify_policy(
+            agent_id="your-agent-id",
+            policy_id="finance.payment.refund.v1",  # Any policy from ./policies
+            context={
                 "amount": 1000,
                 "currency": "USD",
                 "order_id": "order_123",
                 "reason": "defective"
             },
-            "unique-key-123"  # idempotency key
+            idempotency_key="unique-key-123"  # Optional
         )
 
         if decision.allow:
-            print("✅ Refund approved!")
+            print("✅ Policy verification passed!")
             print(f"Decision ID: {decision.decision_id}")
             print(f"Assurance Level: {decision.assurance_level}")
         else:
-            print("❌ Refund denied!")
+            print("❌ Policy verification failed!")
             for reason in decision.reasons or []:
                 print(f"  - [{reason.get('severity', 'info')}] {reason['code']}: {reason['message']}")
     except AportError as error:

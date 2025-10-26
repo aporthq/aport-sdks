@@ -34,8 +34,8 @@ keywords = ["agent-passport", "ai", "authentication", "verification", "aport", "
 [project.urls]
 Homepage = "https://aport.io"
 Documentation = "https://aport.io/docs"
-Repository = "https://github.com/aporthq/agent-passport"
-Issues = "https://github.com/aporthq/agent-passport/issues"
+Repository = "https://github.com/aporthq/aport-sdks-and-middlewares"
+Issues = "https://github.com/aporthq/aport-sdks-and-middlewares/issues"
 
 [project.optional-dependencies]
 dev = [

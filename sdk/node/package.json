@@ -39,12 +39,12 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/aporthq/agent-passport.git",
+    "url": "https://github.com/aporthq/aport-sdks-and-middlewares.git",
     "directory": "sdk/node"
   },
   "homepage": "https://aport.io",
   "bugs": {
-    "url": "https://github.com/aporthq/agent-passport/issues"
+    "url": "https://github.com/aporthq/aport-sdks-and-middlewares/issues"
   },
   "publishConfig": {
     "access": "public"
