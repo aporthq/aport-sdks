@@ -24,7 +24,7 @@ The following modules were moved from `middleware/fastapi/src/agent_passport_mid
 The SDK modules are now framework-agnostic and can be used in any Python application:
 
 ```python
-from agent_passport import (
+from aporthq_sdk_python import (
     check_assurance_requirement,
     check_capability_requirement,
     check_limits_for_operation,
@@ -50,7 +50,7 @@ assurance_check = check_assurance_requirement(
 A new FastAPI middleware (`AgentPassportMiddlewareV2`) has been created that uses the SDK modules:
 
 ```python
-from agent_passport_middleware import AgentPassportMiddlewareV2, agent_passport_middleware_v2
+from aporthq_middleware_fastapi import AgentPassportMiddlewareV2, agent_passport_middleware_v2
 
 # Option 1: Direct middleware class
 app.add_middleware(AgentPassportMiddlewareV2)
@@ -65,7 +65,7 @@ app.add_middleware(middleware)
 The original FastAPI middleware is still available for backward compatibility:
 
 ```python
-from agent_passport_middleware import (
+from aporthq_middleware_fastapi import (
     AgentPassportMiddleware,  # Original middleware
     AgentPassportMiddlewareV2,  # New SDK-based middleware
     agent_passport_middleware,  # Original factory
@@ -78,7 +78,7 @@ from agent_passport_middleware import (
 ### Direct SDK Usage (Any Python Application)
 
 ```python
-from agent_passport import (
+from aporthq_middleware_fastapi import (
     check_assurance_requirement,
     check_capability_requirement,
     check_limits_for_operation,
@@ -103,7 +103,7 @@ if not result["allowed"]:
 
 ```python
 from fastapi import FastAPI
-from agent_passport_middleware import AgentPassportMiddlewareV2
+from aporthq_middleware_fastapi import AgentPassportMiddlewareV2
 
 app = FastAPI()
 app.add_middleware(AgentPassportMiddlewareV2)
@@ -121,7 +121,7 @@ async def protected_endpoint(request: Request):
 
 ```python
 from flask import Flask, request, jsonify
-from agent_passport import check_assurance_requirement, AssuranceEnforcementConfig
+from aporthq_sdk_python import check_assurance_requirement, AssuranceEnforcementConfig
 
 app = Flask(__name__)
 

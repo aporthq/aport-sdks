@@ -6,7 +6,7 @@ directly in any Python application, not just FastAPI.
 """
 
 from fastapi import FastAPI, Request, HTTPException
-from agent_passport_middleware import (
+from aporthq_middleware_fastapi import (
     # SDK-based middleware
     AgentPassportMiddleware,
     agent_passport_middleware,
@@ -30,7 +30,7 @@ from agent_passport_middleware import (
 app = FastAPI(title="Agent Passport SDK Example")
 
 # Option 1: Use the SDK-based middleware with configuration
-from agent_passport_middleware import AgentPassportMiddlewareOptions
+from aporthq_middleware_fastapi import AgentPassportMiddlewareOptions
 
 middleware_options = AgentPassportMiddlewareOptions(
     skip_paths=["/", "/health", "/docs", "/openapi.json", "/redoc"],

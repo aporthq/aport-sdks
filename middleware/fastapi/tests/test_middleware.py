@@ -6,7 +6,7 @@ from fastapi import FastAPI, Request, Depends
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
 
-from agent_passport_middleware import (
+from aporthq_middleware_fastapi import (
     AgentPassportMiddleware,
     agent_passport_middleware,
     require_policy,
@@ -14,7 +14,7 @@ from agent_passport_middleware import (
     require_data_export_policy,
     AgentPassportMiddlewareOptions,
 )
-from agent_passport import AgentPassport, AportError
+from aporthq_sdk_python import AgentPassport, AportError
 
 
 class TestAgentPassportMiddleware:
@@ -45,7 +45,7 @@ class TestAgentPassportMiddleware:
             version='1.0.0',
         )
 
-    @patch('agent_passport_middleware.middleware.create_client')
+    @patch('aporthq_middleware_fastapi.middleware.create_client')
     def test_agent_passport_middleware_success(self, mock_create_client):
         """Test successful agent passport verification."""
         # Mock the SDK client
@@ -107,7 +107,7 @@ class TestAgentPassportMiddleware:
             assert response.status_code == 200
             assert response.json()["status"] == "ok"
 
-    @patch('agent_passport_middleware.middleware.create_client')
+    @patch('aporthq_middleware_fastapi.middleware.create_client')
     def test_agent_passport_middleware_with_policy(self, mock_create_client):
         """Test middleware with policy enforcement."""
         # Mock the SDK client
@@ -144,7 +144,7 @@ class TestAgentPassportMiddleware:
             assert response.json()["agent"]["agent_id"] == "ap_test123"
             assert response.json()["policy_result"]["allow"] is True
 
-    @patch('agent_passport_middleware.middleware.create_client')
+    @patch('aporthq_middleware_fastapi.middleware.create_client')
     def test_agent_passport_middleware_policy_failure(self, mock_create_client):
         """Test middleware with policy enforcement failure."""
         # Mock the SDK client
@@ -185,7 +185,7 @@ class TestRequirePolicy:
         """Set up test fixtures."""
         self.app = FastAPI()
 
-    @patch('agent_passport_middleware.middleware.create_client')
+    @patch('aporthq_middleware_fastapi.middleware.create_client')
     def test_require_policy_success(self, mock_create_client):
         """Test require_policy dependency with successful verification."""
         # Mock the SDK client
@@ -216,7 +216,7 @@ class TestRequirePolicy:
             assert response.json()["success"] is True
             assert response.json()["policy_data"]["agent"]["agent_id"] == "ap_test123"
 
-    @patch('agent_passport_middleware.middleware.create_client')
+    @patch('aporthq_middleware_fastapi.middleware.create_client')
     def test_require_policy_failure(self, mock_create_client):
         """Test require_policy dependency with failed verification."""
         # Mock the SDK client
@@ -254,7 +254,7 @@ class TestRequireRefundPolicy:
         """Set up test fixtures."""
         self.app = FastAPI()
 
-    @patch('agent_passport_middleware.middleware.create_client')
+    @patch('aporthq_middleware_fastapi.middleware.create_client')
     def test_require_refund_policy(self, mock_create_client):
         """Test require_refund_policy convenience function."""
         # Mock the SDK client
@@ -293,7 +293,7 @@ class TestRequireDataExportPolicy:
         """Set up test fixtures."""
         self.app = FastAPI()
 
-    @patch('agent_passport_middleware.middleware.create_client')
+    @patch('aporthq_middleware_fastapi.middleware.create_client')
     def test_require_data_export_policy(self, mock_create_client):
         """Test require_data_export_policy convenience function."""
         # Mock the SDK client

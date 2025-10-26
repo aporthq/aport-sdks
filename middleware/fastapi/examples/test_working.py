@@ -67,7 +67,7 @@ def test_sdk_functions():
     print("\n🧪 Testing SDK Functions...")
     
     try:
-        from agent_passport import (
+        from aporthq_sdk_python import (
             check_assurance_requirement,
             check_capability_requirement,
             check_limits_for_operation,
@@ -132,7 +132,7 @@ def test_middleware_helpers():
     print("\n🧪 Testing Middleware Helper Functions...")
     
     try:
-        from agent_passport_middleware import (
+        from aporthq_middleware_fastapi import (
             get_agent,
             has_agent,
             has_agent_permission,

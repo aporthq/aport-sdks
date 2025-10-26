@@ -7,7 +7,7 @@ with explicit agent ID and context from business logic.
 
 from fastapi import FastAPI, HTTPException, Request
 from typing import Optional, List
-from agent_passport_middleware import (
+from aporthq_middleware_fastapi import (
     AgentPassportMiddleware,
     agent_passport_middleware,
     get_agent,
@@ -31,8 +31,8 @@ app = FastAPI(title="Agent Passport Simple Example")
 AGENT_ID = "agents/ap_a2d10232c6534523812423eec8a1425c"  # Your existing agent ID
 
 # Add simplified middleware to the app with configuration
-from agent_passport_middleware import AgentPassportMiddlewareOptions
-from agent_passport_middleware.middleware_simple import AgentPassportMiddleware as SimpleAgentPassportMiddleware
+from aporthq_middleware_fastapi import AgentPassportMiddlewareOptions
+from aporthq_middleware_fastapi.middleware_simple import AgentPassportMiddleware as SimpleAgentPassportMiddleware
 
 middleware_options = AgentPassportMiddlewareOptions(
     skip_paths=["/health", "/docs", "/openapi.json", "/redoc"],

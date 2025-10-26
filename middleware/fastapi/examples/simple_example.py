@@ -11,7 +11,7 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 import uvicorn
 
-from agent_passport_middleware import (
+from aporthq_middleware_fastapi import (
     agent_passport_middleware,
     require_policy,
     require_policy_with_context,

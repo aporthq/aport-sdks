@@ -30,7 +30,7 @@ pip install agent-passport-middleware-fastapi
 
 ```python
 from fastapi import FastAPI
-from agent_passport_middleware import agent_passport_middleware, AgentPassportMiddlewareOptions
+from aporthq_middleware_fastapi import agent_passport_middleware, AgentPassportMiddlewareOptions
 
 app = FastAPI()
 
@@ -54,7 +54,7 @@ async def process_refund(request: Request):
 ### 2. Route-Specific Policy Enforcement
 
 ```python
-from agent_passport_middleware import require_policy, require_policy_with_context
+from aporthq_middleware_fastapi import require_policy, require_policy_with_context
 
 AGENT_ID = "ap_a2d10232c6534523812423eec8a1425c45678"  # Your agent ID
 
@@ -244,7 +244,7 @@ app.add_middleware(
 
 ```python
 from fastapi import FastAPI, Request
-from agent_passport_middleware import require_policy
+from aporthq_middleware_fastapi import require_policy
 
 app = FastAPI()
 
