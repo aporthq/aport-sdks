@@ -37,7 +37,7 @@ async def main():
 
     # Or for sandbox/testing
     sandbox_client = APortClient(APortClientOptions(
-        base_url="https://sandbox-api.aport.io",  # Sandbox API
+        base_url="https://sandbox.aport.io",  # Sandbox API
         api_key="your-sandbox-key"
     ))
 
@@ -85,7 +85,7 @@ if __name__ == "__main__":
 The SDK supports different environments through the `base_url` parameter:
 
 - **Production**: `https://api.aport.io` - The main APort API
-- **Sandbox**: `https://sandbox-api.aport.io` - Testing environment with mock data
+- **Sandbox**: `https://sandbox.aport.io` - Testing environment with mock data
 - **Self-hosted**: `https://your-domain.com` - Your own APort instance
 
 You can also host your own APort service for complete control over policy verification and data privacy.

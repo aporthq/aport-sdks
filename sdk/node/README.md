@@ -47,7 +47,7 @@ const client = new APortClient({
 
 // Or for sandbox/testing
 const sandboxClient = new APortClient({
-  baseUrl: 'https://sandbox-api.aport.io', // Sandbox API
+  baseUrl: 'https://sandbox.aport.io', // Sandbox API
   apiKey: 'your-sandbox-key'
 });
 
@@ -97,7 +97,7 @@ try {
 The SDK supports different environments through the `baseUrl` parameter:
 
 - **Production**: `https://api.aport.io` - The main APort API
-- **Sandbox**: `https://sandbox-api.aport.io` - Testing environment with mock data
+- **Sandbox**: `https://sandbox.aport.io` - Testing environment with mock data
 - **Self-hosted**: `https://your-domain.com` - Your own APort instance
 
 You can also host your own APort service for complete control over policy verification and data privacy.
