@@ -50,7 +50,7 @@ pip install agent-passport-sdk
 ```
 
 ```python
-from agent_passport import agent_session, AgentPassportClient
+from aporthq_sdk_python import agent_session, AgentPassportClient
 
 # Use agent session for automatic header injection
 with agent_session('ap_a2d10232c6534523812423eec8a1425c4567890abcdef') as session:
@@ -87,7 +87,7 @@ pip install agent-passport-middleware-fastapi
 
 ```python
 from fastapi import FastAPI, Request
-from agent_passport_middleware import agent_passport_middleware
+from aporthq_middleware_fastapi import agent_passport_middleware
 
 app = FastAPI()
 app.add_middleware(agent_passport_middleware())

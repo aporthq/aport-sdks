@@ -8,7 +8,7 @@ import json
 from unittest.mock import AsyncMock, Mock, patch
 import aiohttp
 
-from agent_passport import (
+from aporthq_sdk_python import (
     APortClient,
     APortClientOptions,
     PolicyVerifier,

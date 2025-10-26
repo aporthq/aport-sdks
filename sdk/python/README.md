@@ -25,7 +25,7 @@ pip install aporthq-sdk-python
 
 ```python
 import asyncio
-from agent_passport import APortClient, APortClientOptions, PolicyVerifier, AportError
+from aporthq_sdk_python import APortClient, APortClientOptions, PolicyVerifier, AportError
 
 async def main():
     # Initialize client for production
@@ -152,7 +152,7 @@ These methods follow the same pattern as `verify_refund()` and `verify_repositor
 The SDK raises `AportError` for API request failures with detailed error information.
 
 ```python
-from agent_passport import AportError
+from aporthq_sdk_python import AportError
 
 try:
     await client.verify_policy("invalid-agent", "finance.payment.refund.v1", {})
@@ -231,7 +231,7 @@ client = APortClient(APortClientOptions(
 The SDK includes full type hints for all classes, methods, and types.
 
 ```python
-from agent_passport import APortClient, APortClientOptions, PolicyVerificationResponse
+from aporthq_sdk_python import APortClient, APortClientOptions, PolicyVerificationResponse
 
 options: APortClientOptions = APortClientOptions(
     base_url='https://api.aport.io',

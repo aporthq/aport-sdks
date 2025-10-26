@@ -3,11 +3,11 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "agent-passport-middleware-fastapi"
+name = "aporthq-middleware-fastapi"
 version = "0.1.0"
 description = "FastAPI middleware for The Passport for AI Agents"
 authors = [
-    {name = "The Passport for AI Agents", email = "dev@agent-passport.com"}
+    {name = "APort Team", email = "team@aport.io"}
 ]
 license = {text = "MIT"}
 readme = "README.md"
@@ -27,6 +27,7 @@ dependencies = [
     "fastapi>=0.100.0",
     "aporthq-sdk-python>=0.1.0",
     "typing-extensions>=4.0.0",
+    "starlette>=0.27.0",
 ]
 
 [project.optional-dependencies]
@@ -41,6 +42,7 @@ dev = [
 
 [tool.setuptools.packages.find]
 where = ["src"]
+include = ["aporthq_middleware_fastapi*"]
 
 [tool.black]
 line-length = 88

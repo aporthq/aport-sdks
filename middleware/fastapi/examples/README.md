@@ -67,7 +67,7 @@ curl -X GET 'http://localhost:8000/protected' \
 ### SDK-Based Middleware Approach:
 ```python
 from fastapi import FastAPI, Request
-from agent_passport_middleware import (
+from aporthq_middleware_fastapi import (
     AgentPassportMiddleware,
     get_agent,
     check_assurance_requirement,
@@ -101,7 +101,7 @@ async def protected_endpoint(request: Request):
 
 ### Direct SDK Usage (Any Python App):
 ```python
-from agent_passport import (
+from aporthq_sdk_python import (
     AgentPassportClient,
     check_assurance_requirement,
     check_limits_for_operation,
@@ -165,7 +165,7 @@ limits_check = check_limits_for_operation(
 ## ⚙️ Configuration
 
 ```python
-from agent_passport_middleware import AgentPassportMiddlewareOptions
+from aporthq_middleware_fastapi import AgentPassportMiddlewareOptions
 
 middleware_options = AgentPassportMiddlewareOptions(
     base_url="https://api.aport.io",  # Agent Passport API URL
